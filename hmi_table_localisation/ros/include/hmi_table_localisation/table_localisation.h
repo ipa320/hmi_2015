@@ -70,6 +70,10 @@
 #include <tf/tf.h>
 #include <tf/transform_broadcaster.h>
 
+// dynamic reconfigure
+#include <dynamic_reconfigure/server.h>
+#include <hmi_table_localisation/TableLocalisationConfig.h>
+
 
 class TableLocalization
 {
@@ -123,12 +127,18 @@ public:
 private:
 
 	void callback(const sensor_msgs::LaserScan::ConstPtr& laser_scan_msg);
+	void dynamicReconfigureCallback(hmi_table_localisation::TableLocalisationConfig& config, uint32_t level);
 
 	ros::NodeHandle node_handle_;
 	ros::Subscriber laser_scan_sub_;
 
 	tf::TransformBroadcaster transform_broadcaster_;
 
+	dynamic_reconfigure::Server<hmi_table_localisation::TableLocalisationConfig> dynamic_reconfigure_server_;
+	tf::Vector3 avg_translation_;
+	tf::Quaternion avg_orientation_;
+	double update_rate_;
+	std::string child_frame_name_;
 };
 
 #endif // TABLE_LOCALISATION_H

@@ -10,6 +10,7 @@ set(catkin_RUN_PACKAGES # all ROS packages from package.xml (libopencv-dev is sy
   roscpp
   sensor_msgs
   tf
+  dynamic_reconfigure
 )
 
 set(catkin_BUILD_PACKAGES 
@@ -25,7 +26,7 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 ## System dependencies are found with CMake's conventions
-# find_package(Boost REQUIRED COMPONENTS system)
+find_package(Boost REQUIRED COMPONENTS system)
 
 
 ## Uncomment this if the package has a setup.py. This macro ensures
@@ -84,6 +85,10 @@ find_package(catkin REQUIRED COMPONENTS
 #   std_msgs  # Or other packages containing msgs
 # )
 
+generate_dynamic_reconfigure_options(
+  cfg/TableLocalisation.cfg
+)
+
 ###################################
 ## catkin specific configuration ##
 ###################################
@@ -100,6 +105,7 @@ LIBRARIES
 CATKIN_DEPENDS
 	${catkin_RUN_PACKAGES}
 DEPENDS
+	Boost
 )
 
 ###########
@@ -110,14 +116,17 @@ DEPENDS
 ## Your package locations should be listed before other locations
 include_directories(	ros/include
 						${catkin_INCLUDE_DIRS}
+						${Boost_INCLUDE_DIRS}
 )
 
 add_executable(hmi_table_localisation_node
 						ros/src/table_localisation.cpp 
 						ros/src/table_localisation_node.cpp
 )
+add_dependencies(hmi_table_localisation_node ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_gencfg)
 target_link_libraries(hmi_table_localisation_node
 	${catkin_LIBRARIES}
+	${Boost_LIBRARIES}
 )
 
 

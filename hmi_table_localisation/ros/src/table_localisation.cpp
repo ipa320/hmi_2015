@@ -61,7 +61,12 @@
 TableLocalization::TableLocalization(ros::NodeHandle& nh)
 		: node_handle_(nh)
 {
+	// subscribers
 	laser_scan_sub_ = node_handle_.subscribe("laser_scan_in", 0, &TableLocalization::callback, this);
+
+	// dynamic reconfigure
+	dynamic_reconfigure_server_.setCallback(boost::bind(&TableLocalization::dynamicReconfigureCallback, this, _1, _2));
+	avg_translation_.setZero();
 }
 
 TableLocalization::~TableLocalization()
@@ -130,15 +135,34 @@ void TableLocalization::callback(const sensor_msgs::LaserScan::ConstPtr& laser_s
 	{
 		publish_tf = true;
 		// offset in laser scanner coordinate system
-		tf::Vector3 origin((reflectors[0].x+reflectors[1].x)*0.5, (reflectors[0].y+reflectors[1].y)*0.5, 0.);
+		tf::Vector3 translation((reflectors[0].x+reflectors[1].x)*0.5, (reflectors[0].y+reflectors[1].y)*0.5, 0.);
 		// direction of x-axis in laser scanner coordinate system
 		Point2d normal(reflectors[1].y-reflectors[0].y, reflectors[0].x-reflectors[1].x);
-		if (normal.x*origin.getX() + normal.y*origin.getY() < 0)
+		if (normal.x*translation.getX() + normal.y*translation.getY() < 0)
 			normal *= -1.;
 		double angle = atan2(normal.y, normal.x);
+		tf::Quaternion orientation(tf::Vector3(0,0,1), angle);
+
+		// update transform
+		if (avg_translation_.isZero())
+		{
+			// use value directly on first message
+			avg_translation_ = translation;
+			avg_orientation_ = orientation;
+		}
+		else
+		{
+			// update value
+			avg_translation_ = (1.0 - update_rate_) * avg_translation_ + update_rate_ * translation;
+			avg_orientation_.setW((1.0 - update_rate_) * avg_orientation_.getW() + update_rate_ * orientation.getW());
+			avg_orientation_.setX((1.0 - update_rate_) * avg_orientation_.getX() + update_rate_ * orientation.getX());
+			avg_orientation_.setY((1.0 - update_rate_) * avg_orientation_.getY() + update_rate_ * orientation.getY());
+			avg_orientation_.setZ((1.0 - update_rate_) * avg_orientation_.getZ() + update_rate_ * orientation.getZ());
+		}
+
 		// transform
-		transform_table_reference.setOrigin(origin);
-		transform_table_reference.setRotation(tf::Quaternion(tf::Vector3(0,0,1), angle));
+		transform_table_reference.setOrigin(avg_translation_);
+		transform_table_reference.setRotation(avg_orientation_);
 	}
 	else if (reflectors.size() > 2)
 	{
@@ -148,6 +172,13 @@ void TableLocalization::callback(const sensor_msgs::LaserScan::ConstPtr& laser_s
 	// publish coordinate system on tf
 	if (publish_tf == true)
 	{
-		transform_broadcaster_.sendTransform(tf::StampedTransform(transform_table_reference.inverse(), laser_scan_msg->header.stamp, "/table_reference", laser_scan_msg->header.frame_id));
+		transform_broadcaster_.sendTransform(tf::StampedTransform(transform_table_reference.inverse(), laser_scan_msg->header.stamp, child_frame_name_, laser_scan_msg->header.frame_id));
 	}
+}
+
+void TableLocalization::dynamicReconfigureCallback(hmi_table_localisation::TableLocalisationConfig &config, uint32_t level)
+{
+	update_rate_ = config.update_rate;
+	child_frame_name_ = config.child_frame_name;
+	std::cout << "Reconfigure request with\n update_rate=" << update_rate_ << "\n child_frame_name=" << child_frame_name_ << "\n";
 }
