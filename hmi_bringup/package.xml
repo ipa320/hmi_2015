@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package>
-  <name>hmi_2015</name>
+  <name>hmi_bringup</name>
   <version>0.0.0</version>
-  <description>The hmi_2015 package</description>
+  <description>The hmi_bringup package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag --> 
   <!-- Example:  -->
@@ -19,7 +19,7 @@
   <!-- Url tags are optional, but mutiple are allowed, one per tag -->
   <!-- Optional attribute type can be: website, bugtracker, or repository -->
   <!-- Example: -->
-  <!-- <url type="website">http://wiki.ros.org/hmi_2015</url> -->
+  <!-- <url type="website">http://wiki.ros.org/hmi_bringup</url> -->
 
 
   <!-- Author tags are optional, mutiple are allowed, one per tag -->
