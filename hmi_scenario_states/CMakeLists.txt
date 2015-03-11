@@ -6,6 +6,9 @@ project(hmi_scenario_states)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   cob_script_server
+  smach
+  smach_ros
+  rospy
 )
 
 ## System dependencies are found with CMake's conventions
