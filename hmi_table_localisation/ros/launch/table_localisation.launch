@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+
+<launch>
+	<node name="hmi_table_localisation" pkg="hmi_table_localisation" type="hmi_table_localisation_node" output="screen">
+		<remap from="laser_scan_in" to="/scan_front"/>
+	</node>
+</launch>
