@@ -13,6 +13,6 @@ count4: [[-0.2, -1.65, 1, 0, 0, 0, 0]]
 point2torso_low: [[-0.8, -1, 0, -1.4, -0.5, -1, 0]]
 
 # trajectory
-wave_hmi: [wave1, wave2, wave1, wave2]
+wave_hmi: [wink1, wink2, wink1, wink2]
 count: [count1, count1a, count2, count2a, count3, count3a, count4]
 draw_torso: [point2chest, point2torso_low, point2chest]
