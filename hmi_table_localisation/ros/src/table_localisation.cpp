@@ -74,7 +74,7 @@ TableLocalization::~TableLocalization()
 
 }
 
-#define DEBUG_OUTPUT
+//#define DEBUG_OUTPUT
 void TableLocalization::callback(const sensor_msgs::LaserScan::ConstPtr& laser_scan_msg)
 {
 	// detect reflector markers (by intensity thresholding)
@@ -166,13 +166,16 @@ void TableLocalization::callback(const sensor_msgs::LaserScan::ConstPtr& laser_s
 	}
 	else if (reflectors.size() > 2)
 	{
+#ifdef DEBUG_OUTPUT
 		ROS_WARN("Regression with >2 reflectors not implemented");
+#endif
+		ROS_DEBUG("Regression with >2 reflectors not implemented");
 	}
 
 	// publish coordinate system on tf
 	if (publish_tf == true)
 	{
-		transform_broadcaster_.sendTransform(tf::StampedTransform(transform_table_reference.inverse(), laser_scan_msg->header.stamp, child_frame_name_, laser_scan_msg->header.frame_id));
+		transform_broadcaster_.sendTransform(tf::StampedTransform(transform_table_reference, laser_scan_msg->header.stamp, laser_scan_msg->header.frame_id, child_frame_name_));
 	}
 }
 
