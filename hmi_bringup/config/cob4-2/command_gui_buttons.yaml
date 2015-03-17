@@ -31,7 +31,5 @@ group6:
     [folded,move,folded],
     [side, move, side],
     [hug, move, hug],
-    [wave, move, wave_hmi],
-    [point2chest, move, point2chest],
-    [count(4), move, count],
-    [draw torso, move, draw_torso]] 
+    [wave, move, wave_hmi]]
+
