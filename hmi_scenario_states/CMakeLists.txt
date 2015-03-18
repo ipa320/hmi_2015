@@ -90,7 +90,6 @@ catkin_package(
 ###########
 ## Build ##
 ###########
-rosbuild_add_executable(drive_base src/drive_base.cpp)
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 # include_directories(include)
@@ -101,7 +100,6 @@ rosbuild_add_executable(drive_base src/drive_base.cpp)
 # )
 
 ## Declare a cpp executable
-add_executable(drive_base src/drive_base.cpp)
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
 # add_dependencies(hmi_scenario_states_node hmi_scenario_states_generate_messages_cpp)
@@ -122,7 +120,6 @@ add_executable(drive_base src/drive_base.cpp)
 ## in contrast to setup.py, you can choose the destination
 install(PROGRAMS
    scripts/Cob42Introduction_beta.py
-   scripts/arena_wave.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

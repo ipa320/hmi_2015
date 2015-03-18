@@ -99,6 +99,7 @@ class CobIntroduction(smach.State):
             rospy.loginfo("2 = Modules: torso")
             rospy.loginfo("3 = Modules: arms")
             rospy.loginfo("4 = Modules: head")
+            rospy.loginfo("5 = Software highlights")
             while True:
                 try:          
                     usr_input = raw_input("Please type a number(int) for the scene to begin with:")
@@ -212,17 +213,41 @@ class CobIntroduction(smach.State):
             sss.move("arm_right", [[1.5, -0.3, 0, 1, 0, -0.2, 0]])
 
             sss.move("arm_right", "side", False)
+            handle_lastmv = sss.move("arm_left", "side")
+            handle_lastmv.wait()
+            
+            # :: 3.1.Hands
+            sss.say(["Not only do i have arms, but also hands."])
+            ## Open , close hands
+            sss.say(["Combined with my 3D-Sensors iam able to recognize objects and grab or manipulate them"])
+            sss.move("arm_right", "carry", False)
+            sss.move("arm_left", "carry", False)
+            sss.say(["So i could not only entertain you, but acctually help you carry stuff around in your appartment"])
+            sss.say(["If you stay until the end of my presentation, maybe i will serve you some fresh cookies"])			
+
+            sss.move("arm_right", "side", False)
             handle_lastmv = sss.move("arm_left", "folded")
             handle_lastmv.wait()
-			
+
             n = n+1
 
         if n == 4:
             # :: 4.Explain modules(head)
             rospy.loginfo("Explaining modules(head)")
+            sss.move("arm_right", "point2head", False)
+            sss.say(["And finally, something i always forget, my head"])
+            sss.move("arm_right", "side")
+
+        if n == 5:
+            # :: 5.Software highlights
+            sss.move("arm_right", "open", False)
+            sss.move("arm_left", "open", False)
+            sss.say(["Now that you have seen my hardware highlights, ill tell you something about my software"])
+            sss.say(["I am shipped with open source drivers and powered by the Open Source Robot Operating System"])
 
         ## :: Final
         rospy.loginfo("Final/Exit scene reached")
+        sss.say(["Now, my presentation has finally come to and end"])
         sss.say(["Thank you for your intereset"])
         sss.move_base_rel("base", [0, 0, 0.5])
         sss.say(["Thank you"])
