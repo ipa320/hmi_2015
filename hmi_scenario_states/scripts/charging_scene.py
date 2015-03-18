@@ -100,7 +100,13 @@ class CobIntroduction(smach.State):
             rospy.loginfo("2 = Thinking (needs place to move)")
             rospy.loginfo("3 = Gestures, randomized timing (needs place for arms)")
             rospy.loginfo("4 = Wave right arm")
-            usr_input = raw_input("Please type a number(int) for the scene to begin with:")
+            while True:
+                try: 
+                    usr_input = raw_input("Please type a number(int) for the scene to begin with:")
+                    n = int(usr_input)
+                    break
+                except ValueError:
+                    rospy.loginfo("You didn't type a number, please try again.")
             break
         n = int(usr_input)
 		
@@ -129,7 +135,7 @@ class CobIntroduction(smach.State):
         
             while True:
                 n=random.random()
-                time.sleep(n*90)
+                time.sleep(n*60)
 
                 #Thinking
                 rospy.loginfo("Cob: Thinking")
@@ -137,11 +143,11 @@ class CobIntroduction(smach.State):
                 sss.move("arm_left",[[0.4, 1.5, -1, 2.2, 0 , 0.4, 0]])
                 
                 n=random.random()
-                time.sleep(n*90)
+                time.sleep(n*60)
                 sss.move("arm_right", "folded")
                 sss.move("arm_left", "folded")
                 n=random.random()
-                time.sleep(n*90)
+                time.sleep(n*60)
 
                 #Wave left
                 ("Cob: Waving left")
@@ -150,7 +156,7 @@ class CobIntroduction(smach.State):
                 sss.move("arm_left", "folded")
 
                 n=random.random()
-                time.sleep(n*90)
+                time.sleep(n*60)
 
                 #Wave right
                 ("Cob: waving right")

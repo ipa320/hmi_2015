@@ -99,34 +99,36 @@ class CobIntroduction(smach.State):
             rospy.loginfo("2 = Modules: torso")
             rospy.loginfo("3 = Modules: arms")
             rospy.loginfo("4 = Modules: head")
-            usr_input = raw_input("Please type a number(int) for the scene to begin with:")
+            while True:
+                try:          
+                    usr_input = raw_input("Please type a number(int) for the scene to begin with:")
+                    n = int(usr_input)
+                    break
+                except ValueError:
+                    rospy.loginfo("You didn't type a number, please try again")
             break
-        n = int(usr_input)
 		
         if n == 0:
             # :: 0.Introduction & lights
             rospy.loginfo("Beginning introduction of Care-O-Bot 4-2 for HMI 2015")
-            sss.move("arm_right","side", False)
-            sss.move("arm_left","side")
+            sss.move("arm_right", "side", False)
+            sss.move("arm_left", "side")
 
             rospy.loginfo("Hello and Welcome")
+            sss.say(["Hello and welcome"])
             handle_wave = sss.move("arm_right", "wave_hmi", False)
-            bool_turn = True
-            while False: #"bool_turn" once movement works
-                sss.move_base_rel("base", [0, 0, 0.3])
-                sss.move_base_rel("base",[0, 0, -0.6])
-                if not handle_wave.get_state("ACTIVE") == 1:
-                    bool_turn = False
-                sss.move_base_rel("base", [0, 0, 0.3], False)
+            sss.move_base_rel("base", [0, 0, 0.3])
+            sss.move_base_rel("base", [0, 0, -0.6])
+            sss.move_base_rel("base", [0, 0, 0.3], False)
             sss.say(["Hello and Welcome to my Presentation, my name is Care-O-Bot. Please dont be afraid, i am a peacefull beeing"])
             handle_wave.wait()
             sss.move("arm_right","point2chest", False)
             sss.say(["I am a mobile service robot build by Fraunhofer I. P. A., in Stuttgart and I am designed as a household assistant. My job is to help for example elderly people to stay longer at home, so that they do not have to go to a care facility."])
-            sss.move("arm_right","side")
+            sss.move("arm_right", "side")
         
             # Explain lights & display
             rospy.loginfo("Showing lights & mimis")
-            sss.say(["For interaction with you and expressing my mood iam able to change my colored lights and use my head-integrated display"],False)
+            sss.say(["For interaction with you and expressing my mood iam able to change my colored lights and use my head-integrated display"], False)
             
             # Colors & Mimics / Not done yet
             #(...)
@@ -136,14 +138,14 @@ class CobIntroduction(smach.State):
 
             sss.move("arm_right", "count1", False)
             sss.say(["First of all, I can interact with you, showing you my mood and intention with lights and my head-display"])
-            sss.move("arm_right","count1a")
-            sss.move("arm_right","count2", False)
+            sss.move("arm_right", "count1a")
+            sss.move("arm_right", "count2", False)
             sss.say(["I can assist you at your home, for example, cleaning and cooking or do services in restaurants or hotels."])
-            sss.move("arm_right","count2a")
-            sss.move("arm_right","count3", False)
+            sss.move("arm_right", "count2a")
+            sss.move("arm_right", "count3", False)
             sss.say(["or i could work in a manufacturing enviroment shelf-picking and commissioning"])
-            sss.move("arm_right","count3a")
-            sss.move("arm_right","count4",False)
+            sss.move("arm_right", "count3a")
+            sss.move("arm_right", "count4",False)
             sss.say(["Finally , one of my technical highlights, is the modularity. Let me explain my different modules."])        
             			
             n = n+1
@@ -152,23 +154,23 @@ class CobIntroduction(smach.State):
             # :: 1.Explaing modules(base)
             rospy.loginfo("Explaining modules(base)")       
             sss.say(["I consist of 4 elementary parts, i'll start with my base."], False)
-            sss.move("arm_right","point2base")
+            sss.move("arm_right", "point2base")
             sss.say(["I can move forward and backward"], False)
-            sss.move_base_rel("base",[-0.1, 0, 0])
-            sss.move_base_rel("base",[0.1, 0, 0])
+            sss.move_base_rel("base", [-0.1, 0, 0])
+            sss.move_base_rel("base", [0.1, 0, 0])
             sss.say(["or sideways"])
-            sss.move_base_rel("base",[0, 0.1, 0])
-            sss.move_base_rel("base",[0, -0.1, 0])
-            sss.move_base_rel("base",[0, -0.1, 0], False)
+            sss.move_base_rel("base", [0, 0.1, 0])
+            sss.move_base_rel("base", [0, -0.1, 0])
+            sss.move_base_rel("base", [0, -0.1, 0], False)
             sss.say(["and back."], False)
-            sss.move_base_rel("base",[0, 0.1, 0])
+            sss.move_base_rel("base", [0, 0.1, 0])
             sss.say(["Iam also capable to turn on the spot like this"])
-            sss.move_base_rel("base",[0, 0, 0.5])
-            sss.move_base_rel("base",[0, 0, 0.5])
-            sss.move_base_rel("base",[0, 0, -0.5])
-            sss.move_base_rel("base",[0, 0, -0.5])
-            sss.move_base_rel("base",[0, 0, -0.5])
-            sss.move_base_rel("base",[0, 0, 0.5])
+            sss.move_base_rel("base", [0, 0, 0.5])
+            sss.move_base_rel("base", [0, 0, 0.5])
+            sss.move_base_rel("base", [0, 0, -0.5])
+            sss.move_base_rel("base", [0, 0, -0.5])
+            sss.move_base_rel("base", [0, 0, -0.5])
+            sss.move_base_rel("base", [0, 0, 0.5])
             sss.say(["And, of course, i can combine the movements"])
 
             n = n+1
@@ -186,65 +188,71 @@ class CobIntroduction(smach.State):
         if n == 3:
 			# :: 3.Explain modules (arms)
             rospy.loginfo("Explaining modules(arms)")
-            sss.move("arm_right",[[1.5, 0, 0, 0, 0, 0, 0]],False)
-            sss.move("arm_left",[[-1.5, 0, 0, 0, 0, 0, 0]])
+            sss.move("arm_right", [[1.5, 0, 0, 0, 0, 0, 0]], False)
+            sss.move("arm_left", [[-1.5, 0, 0, 0, 0, 0, 0]])
             sss.say(["as you can see, i have two arms, which i can use indepently"], False)
-            r_handle = sss.move("arm_right",[[1.5, 0.3, 0, 0, 0, 0, 0]], False)
-            sss.move("arm_left",[[-1.5, 0.3, 0, 0, 0, 0, 0]])           
+            r_handle = sss.move("arm_right", [[1.5, 0.3, 0, 0, 0, 0, 0]], False)
+            sss.move("arm_left", [[-1.5, 0.3, 0, 0, 0, 0, 0]])           
             r_handle.wait()
-            sss.move("arm_right",[[1.5, -0.3, 0, 0, 0, 0, 0]], False)
-            sss.move("arm_left",[[-1.5, -0.3, 0, 0, 0, 0, 0]])
+            sss.move("arm_right", [[1.5, -0.3, 0, 0, 0, 0, 0]], False)
+            sss.move("arm_left", [[-1.5, -0.3, 0, 0, 0, 0, 0]])
             
             sss.say(["Both arms consist of 7 independet joints, allowing me to perform complex movements"], False)
 
             rospy.loginfo("Beginning arena-like wave")
-            sss.move("arm_right",[[1.5, 0, 0, 0, 0, 0, 0]],False)
-            sss.move("arm_left",[[-1.5, 0, 0, 0, 0, 0, 0]])
-            sss.move("arm_right",[[1.5, 0, 0, 0, 0, 0.5, 0]])
-            sss.move("arm_right",[[1.5, -0.3, 0, 1, 0, -0.2, 0]])
+            sss.move("arm_right", [[1.5, 0, 0, 0, 0, 0, 0]], False)
+            sss.move("arm_left", [[-1.5, 0, 0, 0, 0, 0, 0]])
+            sss.move("arm_right", [[1.5, 0, 0, 0, 0, 0.5, 0]])
+            sss.move("arm_right", [[1.5, -0.3, 0, 1, 0, -0.2, 0]])
 
-            sss.move("arm_left",[[-1.5, 0.3, 0, -1, 0, 0.2, 0]], False)
-            sss.move("arm_right",[[1.5, 0.3, 0, -1, 0, 0.2, 0]])
+            sss.move("arm_left", [[-1.5, 0.3, 0, -1, 0, 0.2, 0]], False)
+            sss.move("arm_right", [[1.5, 0.3, 0, -1, 0, 0.2, 0]])
 
-            sss.move("arm_left",[[-1.5, -0.3, 0, 1, 0, -0.2, 0]], False)
-            sss.move("arm_right",[[1.5, -0.3, 0, 1, 0, -0.2, 0]])
+            sss.move("arm_left", [[-1.5, -0.3, 0, 1, 0, -0.2, 0]], False)
+            sss.move("arm_right", [[1.5, -0.3, 0, 1, 0, -0.2, 0]])
 
-            sss.move("arm_right","side", False)
-            handle_lastmv = sss.move("arm_left","folded")
+            sss.move("arm_right", "side", False)
+            handle_lastmv = sss.move("arm_left", "folded")
             handle_lastmv.wait()
 			
             n = n+1
-        
+
         if n == 4:
             # :: 4.Explain modules(head)
             rospy.loginfo("Explaining modules(head)")
-            
 
         ## :: Final
         rospy.loginfo("Final/Exit scene reached")
         sss.say(["Thank you for your intereset"])
-        sss.move_base_rel("base",[0, 0, 0.8])
+        sss.move_base_rel("base", [0, 0, 0.5])
         sss.say(["Thank you"])
-        sss.move_base_rel("base",[0, 0, -1.6], False)
-        ss.say(["Thank you for your attention"])
+        sss.move_base_rel("base", [0, 0, -1], False)
+        sss.say(["Thank you for your attention"])
+        sss.move_base_rel("base", [0, 0, 0.5])
 
         #Menu to select finishing action
         rospy.loginfo("------ Menu for exit scenes ------")
-        rospy.loginfo("!!!DEPENT FROM ENVIROMENT - BE CAREFUL!!!")
+        rospy.loginfo("!!!DEPENTS FROM ENVIROMENT - BE CAREFUL!!!")
         rospy.loginfo("0 = arms folded")
         rospy.loginfo("1 = get cookies(HMI-2015)")
-        
-        user_input=raw_input("Please select how to finish the presentation")
-        i = int(user_input)
+        while True:
+            try:
+                user_input=raw_input("Please select how to finish the presentation:")
+                i=int(user_input)
+                break
+            except ValueError:
+                rospy.loginfo("You didn't type a number, please try again")
 
         if i == 0:
-            sss.move("arm_left","folded", False)
-            sss.move("arm_right","folded")
+            #Arms folded
+            sss.move("arm_left", "folded", False)
+            sss.move("arm_right", "folded")
 
         if i == 1:
             ## Find cookies, bring them to the viewers
+            pass
 
-        return 'succeeded'
+        return "succeeded"
 
 ## -- State Machine 
 
