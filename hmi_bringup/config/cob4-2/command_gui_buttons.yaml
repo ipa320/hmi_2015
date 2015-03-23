@@ -19,7 +19,8 @@ group5:
     [home,move,home],
     [folded,move,folded],
     [side, move, side],
-    [hug, move, hug]]
+    [hug, move, hug],
+    [wave, move, wave_hmi]]
 group6:
   group_name: arm_right
   component_name: arm_right
@@ -29,4 +30,6 @@ group6:
     [home,move,home],
     [folded,move,folded],
     [side, move, side],
-    [hug, move, hug]]
+    [hug, move, hug],
+    [wave, move, wave_hmi]]
+
