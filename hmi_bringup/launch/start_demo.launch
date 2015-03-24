@@ -12,4 +12,14 @@
 
     <node pkg="hmi_manipulation" type="roses_tf_broadcaster.py" name="roses_tf_broadcaster" respawn="false" output="screen" />
 
+    <!-- start navigation -->
+    <include file="$(find cob_navigation_global)/launch/2dnav_linear.launch" >
+        <arg name="map" value="/u/fmw/map.yaml" /> <!-- TODO: map needs to be adjusted -->
+    </include>
+
+    <!-- start moveit -->
+    <include file="$(find cob_moveit_config)/launch/move_group.launch">
+        <arg name="robot" value="$(arg robot)"/>
+    </include>
+
 </launch>

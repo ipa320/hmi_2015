@@ -31,7 +31,6 @@ class SelectCurrentRose(smach.State):
             
     def execute(self, userdata):
         if len(self.roses) > 0:
-            #self.current_rose = "rose_right_0-3"
             #self.current_rose = self.roses.pop(random.randint(0,len(self.roses)-1))
             self.current_rose = self.roses.pop()
             rospy.loginfo("selected %s", self.current_rose)
@@ -64,7 +63,7 @@ class SelectCurrentRose(smach.State):
 
 ## -- main script
 class GraspRose(smach.State):
-    def __init__(self):
+    def __init__(self, side = "right"):
         smach.State.__init__(self, 
             outcomes=['succeeded','failed'])
 
@@ -75,7 +74,9 @@ class GraspRose(smach.State):
         self.psi = PlanningSceneInterface()
         
         ### Create a handle for the Move Group Commander
-        self.mgc = MoveGroupCommander("arm_right")
+        self.mgc = MoveGroupCommander("arm_" + side)
+        
+        self.side = side
         
         rospy.sleep(1)
         
@@ -100,7 +101,7 @@ class GraspRose(smach.State):
 
         ### Set next (virtual) start state
         start_state = RobotState()
-        (pre_grasp_config, error_code) = sss.compose_trajectory("arm_right","pre_grasp")
+        (pre_grasp_config, error_code) = sss.compose_trajectory("arm_" + self.side,"pre_grasp")
         if error_code != 0:
             rospy.logerr("unable to parse pre_grasp configuration")
             return "failed"
@@ -174,14 +175,14 @@ class GraspRose(smach.State):
                 traj_lift.joint_trajectory.points[i].time_from_start *= speed_factor
 
             ### execute
-            sss.move("arm_right", "pre_grasp")
-        #    sss.move("gripper_right", "open")
+            sss.move("arm_" + self.side, "pre_grasp")
+            sss.move("gripper_" + self.side, "open")
             self.mgc.execute(traj_approach)
             self.mgc.execute(traj_grasp)
-        #    sss.move("gripper_right", "close")
+            sss.move("gripper_" + self.side, "close")
             self.mgc.execute(traj_lift)
             rospy.sleep(0.5)
-            sss.move("arm_right", "pre_grasp")
+            sss.move("arm_" + self.side, "pre_grasp")
 
         return "succeeded"
 
@@ -195,13 +196,16 @@ class Roses(smach.StateMachine):
         with self:
 
             smach.StateMachine.add('SELECT_CURRENT_ROSE',SelectCurrentRose(),
-                transitions={'succeeded':'GRASP_ROSE',
+                transitions={'succeeded':'GRASP_ROSE_RIGHT',
                     'failed':'failed'})
 
-            smach.StateMachine.add('GRASP_ROSE',GraspRose(),
+            smach.StateMachine.add('GRASP_ROSE_RIGHT',GraspRose("right"),
+                transitions={'succeeded':'SELECT_CURRENT_ROSE',
+                    'failed':'GRASP_ROSE_LEFT'})
+
+            smach.StateMachine.add('GRASP_ROSE_LEFT',GraspRose("left"),
                 transitions={'succeeded':'SELECT_CURRENT_ROSE',
                     'failed':'SELECT_CURRENT_ROSE'})
-
 
 
 
