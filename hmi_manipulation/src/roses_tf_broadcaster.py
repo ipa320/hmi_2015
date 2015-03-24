@@ -49,7 +49,7 @@ if __name__ == '__main__':
         
         
         # testbed
-        bed_of_roses("rose_right", NX, NY, -0.2, 0.2-NY*DY)
+        bed_of_roses("rose_right", NX, NY, -0.3, 0.3-NY*DY)
         
 
         
