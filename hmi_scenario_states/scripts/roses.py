@@ -19,7 +19,8 @@ sss = simple_script_server()
 class SelectCurrentRose(smach.State):
     def __init__(self):
         smach.State.__init__(self, 
-            outcomes=['succeeded','failed'])
+            outcomes=['succeeded','failed'],
+            output_keys=['reset_rotation'])
 
         rospy.Timer(rospy.Duration(0.05), self.broadcast_tf)
         self.br = tf.TransformBroadcaster()
@@ -36,6 +37,7 @@ class SelectCurrentRose(smach.State):
             rospy.loginfo("selected %s", self.current_rose)
             #sss.say(["selected " + self.current_rose], False)
             rospy.sleep(0.5)
+            userdata.reset_rotation = True
             return "succeeded"
         else:
             rospy.logwarn("No more roses, please fill up")
@@ -49,7 +51,7 @@ class SelectCurrentRose(smach.State):
                     (0,0,0),
                      tf.transformations.quaternion_from_euler(0, 0, 0),
                      event.current_real,
-                     "current_rose",
+                     "current_rose_fixed",
                      self.current_rose)
 
     def fill_roses(self):
@@ -61,11 +63,52 @@ class SelectCurrentRose(smach.State):
         return roses
 
 
+
+class RotateRose(smach.State):
+    def __init__(self):
+        smach.State.__init__(self, 
+            outcomes=['succeeded','failed'],
+            input_keys=['reset_rotation'],
+            output_keys=['reset_rotation'])
+
+        rospy.Timer(rospy.Duration(0.05), self.broadcast_tf)
+        self.br = tf.TransformBroadcaster()
+        self.angle_offset = 0
+        self.max_angle = 90.0/180.0*math.pi
+        self.direction = 1
+        self.angle_step = 30.0/180.0*math.pi*self.direction
+        rospy.sleep(1)
+            
+    def execute(self, userdata):
+        #reset angel for second rose
+        if userdata.reset_rotation:
+            self.angle_offset = 0   
+            userdata.reset_rotation = False
+        else:
+            if self.angle_offset > self.max_angle:
+                # reset angle_offset
+                self.angle_offset = 0
+                return "failed"
+            else:
+                self.angle_offset += self.angle_step
+        sss.say(["angle offset is " + str(self.angle_offset)])
+        return "succeeded"
+
+    def broadcast_tf(self, event):
+        self.br.sendTransform(
+                (0, 0, 0),
+                 tf.transformations.quaternion_from_euler(0, 0, self.angle_offset),
+                 event.current_real,
+                 "current_rose",
+                 "current_rose_fixed")
+
+
 ## -- main script
 class GraspRose(smach.State):
     def __init__(self, side = "right"):
         smach.State.__init__(self, 
-            outcomes=['succeeded','failed'])
+            outcomes=['succeeded','failed'],
+            output_keys=['reset_rotation'])
 
         # initialize tf listener
         self.listener = tf.TransformListener()
@@ -83,41 +126,40 @@ class GraspRose(smach.State):
     def execute(self, userdata):
         rospy.loginfo("Grasping rose...")
         #sss.wait_for_input()
-        
-        ### get goal_pose
-        try:
-            (trans, rot) = self.listener.lookupTransform("odom_combined","current_rose",rospy.Time(0))
-            goal_pose = Pose()
-            goal_pose.position.x = trans[0]
-            goal_pose.position.y = trans[1]
-            goal_pose.position.z = trans[2]
-            goal_pose.orientation.x = rot[0]
-            goal_pose.orientation.y = rot[1]
-            goal_pose.orientation.z = rot[2]
-            goal_pose.orientation.w = rot[3]
-        except Exception, e:
-            rospy.logerr("could get transform from base_link to current_rose. Exception: %s", str(e))
-            return "failed"
 
+        if not self.plan_and_execute():
+            userdata.reset_rotation = False
+            return "failed"
+        
+        return "succeeded"
+           
+
+
+    def plan_and_execute(self):
         ### Set next (virtual) start state
         start_state = RobotState()
         (pre_grasp_config, error_code) = sss.compose_trajectory("arm_" + self.side,"pre_grasp")
         if error_code != 0:
             rospy.logerr("unable to parse pre_grasp configuration")
-            return "failed"
+            return False
         start_state.joint_state.name = pre_grasp_config.joint_names
         start_state.joint_state.position = pre_grasp_config.points[0].positions
         start_state.is_diff = True
         self.mgc.set_start_state(start_state)
 
         ### Plan Approach
-        approach_pose = copy.deepcopy(goal_pose)
-        approach_pose.position.x -= 0.1
-        (traj_approach,frac_approach) = self.mgc.compute_cartesian_path([approach_pose], 0.01, 2, True)
+        approach_pose_offset = PoseStamped()
+        approach_pose_offset.header.frame_id = "current_rose"
+        approach_pose_offset.header.stamp = rospy.Time(0)
+        approach_pose_offset.pose.position.x = -0.1
+        approach_pose_offset.pose.orientation.w = 1
+        approach_pose = self.listener.transformPose("odom_combined", approach_pose_offset)
+        
+        (traj_approach,frac_approach) = self.mgc.compute_cartesian_path([approach_pose.pose], 0.01, 2, True)
         if not (frac_approach == 1.0):
             rospy.logerr("Unable to plan approach trajectory")
             sss.say(["no approach trajectory: skipping rose"])
-            return "failed"
+            return False
 
         ### Set next (virtual) start state
         traj_approach_endpoint = traj_approach.joint_trajectory.points[-1]
@@ -128,12 +170,16 @@ class GraspRose(smach.State):
         self.mgc.set_start_state(start_state)
 
         ### Plan Grasp
-        grasp_pose = copy.deepcopy(goal_pose)
-        (traj_grasp,frac_grasp) = self.mgc.compute_cartesian_path([grasp_pose], 0.01, 2, True)
+        grasp_pose_offset = PoseStamped()
+        grasp_pose_offset.header.frame_id = "current_rose"
+        grasp_pose_offset.header.stamp = rospy.Time(0)
+        grasp_pose_offset.pose.orientation.w = 1
+        grasp_pose = self.listener.transformPose("odom_combined", grasp_pose_offset)
+        (traj_grasp,frac_grasp) = self.mgc.compute_cartesian_path([grasp_pose.pose], 0.01, 2, True)
         if not (frac_grasp == 1.0):
             rospy.logerr("Unable to plan grasp trajectory")
             sss.say(["no grasp trajectory: skipping rose"])
-            return "failed"
+            return False
 
         ### Set next (virtual) start state
         traj_grasp_endpoint = traj_grasp.joint_trajectory.points[-1]
@@ -144,19 +190,24 @@ class GraspRose(smach.State):
         self.mgc.set_start_state(start_state)
 
         ### Plan Lift
-        lift_pose = copy.deepcopy(goal_pose)
-        lift_pose.position.z += 0.1
-        (traj_lift,frac_lift) = self.mgc.compute_cartesian_path([lift_pose], 0.01, 2, True)
+        lift_pose_offset = PoseStamped()
+        lift_pose_offset.header.frame_id = "current_rose"
+        lift_pose_offset.header.stamp = rospy.Time(0)
+        lift_pose_offset.pose.position.z = 0.1
+        lift_pose_offset.pose.orientation.w = 1
+        lift_pose = self.listener.transformPose("odom_combined", lift_pose_offset)
+
+        (traj_lift,frac_lift) = self.mgc.compute_cartesian_path([lift_pose.pose], 0.01, 2, True)
         if not (frac_lift == 1.0):
             rospy.logerr("Unable to plan lift trajectory")
             sss.say(["no lift trajectory: skipping rose"])
-            return "failed"
+            return False
 
 
         if not (frac_approach == 1.0 and frac_grasp == 1.0 and frac_lift == 1.0):
             rospy.logerr("Unable to plan whole grasping trajectory")
             sss.say(["skipping rose"])
-            return "failed"
+            return False
         else:
             sss.say(["grasping rose"], False)
 
@@ -166,7 +217,7 @@ class GraspRose(smach.State):
             traj_lift.joint_trajectory.points[-1].velocities = [0]*7
             
             # fix trajectories to be slower
-            speed_factor = 1
+            speed_factor = 2
             for i in range(len(traj_approach.joint_trajectory.points)):
                 traj_approach.joint_trajectory.points[i].time_from_start *= speed_factor
             for i in range(len(traj_grasp.joint_trajectory.points)):
@@ -176,16 +227,14 @@ class GraspRose(smach.State):
 
             ### execute
             sss.move("arm_" + self.side, "pre_grasp")
-            sss.move("gripper_" + self.side, "open")
+            #sss.move("gripper_" + self.side, "open")
             self.mgc.execute(traj_approach)
             self.mgc.execute(traj_grasp)
-            sss.move("gripper_" + self.side, "close")
+            #sss.move("gripper_" + self.side, "close")
             self.mgc.execute(traj_lift)
             rospy.sleep(0.5)
             sss.move("arm_" + self.side, "pre_grasp")
-
-        return "succeeded"
-
+        return True
 
 ## -- State Machine 
 
@@ -193,19 +242,28 @@ class Roses(smach.StateMachine):
     def __init__(self):
         smach.StateMachine.__init__(self,
             outcomes=['finished','failed'])
+        
+        self.userdata.reset_rotation = True
+        
         with self:
 
-            smach.StateMachine.add('SELECT_CURRENT_ROSE',SelectCurrentRose(),
-                transitions={'succeeded':'GRASP_ROSE_RIGHT',
+            smach.StateMachine.add('SELECT_NEXT_ROSE',SelectCurrentRose(),
+                transitions={'succeeded':'ROTATE_ROSE',
                     'failed':'failed'})
 
-            smach.StateMachine.add('GRASP_ROSE_RIGHT',GraspRose("right"),
-                transitions={'succeeded':'SELECT_CURRENT_ROSE',
-                    'failed':'GRASP_ROSE_LEFT'})
+            smach.StateMachine.add('ROTATE_ROSE',RotateRose(),
+                transitions={'succeeded':'GRASP_ROSE_RIGHT',
+                    'failed':'SELECT_NEXT_ROSE'})
 
-            smach.StateMachine.add('GRASP_ROSE_LEFT',GraspRose("left"),
-                transitions={'succeeded':'SELECT_CURRENT_ROSE',
-                    'failed':'SELECT_CURRENT_ROSE'})
+            smach.StateMachine.add('GRASP_ROSE_RIGHT',GraspRose("right"),
+                transitions={'succeeded':'SELECT_NEXT_ROSE',
+                    'failed':'ROTATE_ROSE'})
+
+            #smach.StateMachine.add('GRASP_ROSE_LEFT',GraspRose("left"),
+            #    transitions={'succeeded':'ROTATE_ROSE',
+            #        'failed':'ROTATE_ROSE'})
+                    
+
 
 
 
