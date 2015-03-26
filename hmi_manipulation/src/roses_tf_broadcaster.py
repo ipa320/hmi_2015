@@ -3,26 +3,29 @@ import rospy
 import tf
 import math
 
-HEIGHT_ABOVE_TABLE_TOP = 0.12
-NX = 4
+HEIGHT_ABOVE_TABLE_TOP = 0.15
+NX = 3
 NY = 5
-DX = math.sqrt(0.150*0.150/2)
-DY = 2*DX
-DY_OFFSET_2ND_ROW = DY/2
 
-DISTANCE_BETWEEN_ROSES = math.sqrt(0.15*0.15+0.15*0.15)
-BED_X_OFFSET_FROM_CENTER = 0.38/2-DISTANCE_BETWEEN_ROSES/2
-BED_Y_OFFSET_FROM_CENTER = 0.5+0.5-2*DISTANCE_BETWEEN_ROSES
+DISTANCE_BETWEEN_ROSES_Y = math.sqrt(0.15*0.15+0.15*0.15)
+DISTANCE_BETWEEN_ROSES_X = DISTANCE_BETWEEN_ROSES_Y/2
+DY_OFFSET_2ND_ROW = DISTANCE_BETWEEN_ROSES_Y/2
+BED_X_OFFSET_FROM_CENTER = 0.38/2-DISTANCE_BETWEEN_ROSES_X
+BED_Y_OFFSET_FROM_CENTER = 0.5+0.5-2*DISTANCE_BETWEEN_ROSES_Y
+
 
 def bed_of_roses(prefix, nx, ny, x_offset_from_center, y_offset_from_center):
     roses = []
     for i in range(nx):
         for j in range(ny):
-            if i % 2:
+            if (i-1) % 2:
                 y_offset = 0
             else:
                 y_offset = DY_OFFSET_2ND_ROW
-            broadcast_tf(i*DX+x_offset_from_center,j*DY+y_offset+y_offset_from_center,prefix+"_"+str(i)+"-"+str(j))
+                if j == NY-1:
+                    continue
+            #print "y_offset = ", i, j, y_offset
+            broadcast_tf(i*DISTANCE_BETWEEN_ROSES_X+x_offset_from_center,j*DISTANCE_BETWEEN_ROSES_Y+y_offset+y_offset_from_center,prefix+"_"+str(i)+"-"+str(j))
 
 def broadcast_tf(x,y,name):
     br.sendTransform(
@@ -47,7 +50,7 @@ if __name__ == '__main__':
              "table_reference")
         
         bed_of_roses("rose_left", NX, NY, BED_X_OFFSET_FROM_CENTER, BED_Y_OFFSET_FROM_CENTER)
-        bed_of_roses("rose_right", NX, NY, BED_X_OFFSET_FROM_CENTER, -BED_Y_OFFSET_FROM_CENTER - NY*DY)
+        bed_of_roses("rose_right", NX, NY, BED_X_OFFSET_FROM_CENTER, -BED_Y_OFFSET_FROM_CENTER - (NY-1)*DISTANCE_BETWEEN_ROSES_Y)
         
         
         # testbed e325

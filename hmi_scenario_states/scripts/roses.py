@@ -24,7 +24,7 @@ class SelectCurrentRose(smach.State):
 
         rospy.Timer(rospy.Duration(0.1), self.broadcast_tf)
         self.br = tf.TransformBroadcaster()
-        self.NX = 4
+        self.NX = 3
         self.NY = 5
         self.roses = self.fill_roses()
         self.current_rose = ""
@@ -59,6 +59,8 @@ class SelectCurrentRose(smach.State):
         for side in ["left","right"]:
             for x in reversed(range(self.NX)):
                 for y in range(self.NY):
+                    if (not (x-1) % 2) and (y == self.NY-1):
+                        continue
                     roses.append("rose_" + side + "_" + str(x) + "-" + str(y))
         return roses
 
@@ -82,6 +84,7 @@ class RotateRose(smach.State):
         else:
             rospy.logerr("no side available")
             sys.exit()
+        self.side = side
         self.angle_step = 30.0/180.0*math.pi*self.direction
         rospy.sleep(1)
             
@@ -91,14 +94,16 @@ class RotateRose(smach.State):
             self.angle_offset = 0   
             userdata.reset_rotation = False
         else:
-            if self.angle_offset >= self.max_angle:
+            if self.angle_offset <= -self.max_angle or self.angle_offset >= self.max_angle:
                 # reset angle_offset
                 self.angle_offset = 0
+                sss.say(["skipping rose"])
+                rospy.sleep(0.5) # FIXME: wait for TF to update
+                
                 return "failed"
             else:
                 self.angle_offset += self.angle_step
         #sss.say(["angle offset is " + str(int(round(self.angle_offset/math.pi*180)))], False)
-        
         rospy.sleep(0.5) # FIXME: wait for TF to update
         
         return "succeeded"
@@ -108,7 +113,7 @@ class RotateRose(smach.State):
                 (0, 0, 0),
                  tf.transformations.quaternion_from_euler(0, 0, self.angle_offset),
                  event.current_real,
-                 "current_rose",
+                 "current_rose_" + self.side,
                  "current_rose_fixed")
 
 class SelectArm(smach.State):
@@ -124,8 +129,9 @@ class SelectArm(smach.State):
     def execute(self, userdata):
 
         try:
-            (trans,rot) = self.listener.lookupTransform('/base_link', '/current_rose', rospy.Time(0))
+            (trans,rot) = self.listener.lookupTransform('/base_link', '/current_rose_fixed', rospy.Time(0))
         except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+            rospy.logerr("no transformation from base_link to current_rose_fixed")
             return "failed"
 
         if trans[1] >= 0.0:
@@ -150,7 +156,7 @@ class GraspRose(smach.State):
         
         self.side = side
         
-        self.eef_step = 0.005
+        self.eef_step = 0.01
         self.jump_threshold = 2
         
         rospy.sleep(1)
@@ -181,7 +187,7 @@ class GraspRose(smach.State):
 
         ### Plan Approach
         approach_pose_offset = PoseStamped()
-        approach_pose_offset.header.frame_id = "current_rose"
+        approach_pose_offset.header.frame_id = "current_rose_" + self.side
         approach_pose_offset.header.stamp = rospy.Time(0)
         approach_pose_offset.pose.position.x = -0.1
         approach_pose_offset.pose.orientation.w = 1
@@ -207,7 +213,7 @@ class GraspRose(smach.State):
 
         ### Plan Grasp
         grasp_pose_offset = PoseStamped()
-        grasp_pose_offset.header.frame_id = "current_rose"
+        grasp_pose_offset.header.frame_id = "current_rose_" + self.side
         grasp_pose_offset.header.stamp = rospy.Time(0)
         grasp_pose_offset.pose.orientation.w = 1
         grasp_pose = self.listener.transformPose("odom_combined", grasp_pose_offset)
@@ -227,7 +233,7 @@ class GraspRose(smach.State):
 
         ### Plan Lift
         lift_pose_offset = PoseStamped()
-        lift_pose_offset.header.frame_id = "current_rose"
+        lift_pose_offset.header.frame_id = "current_rose_" + self.side
         lift_pose_offset.header.stamp = rospy.Time(0)
         lift_pose_offset.pose.position.z = 0.1
         lift_pose_offset.pose.orientation.w = 1
@@ -274,7 +280,9 @@ class GraspRose(smach.State):
             self.mgc.execute(traj_lift)
             #sss.wait_for_input()
             rospy.sleep(1)
-            sss.move("arm_" + self.side, "pre_grasp")
+            handle_arm = sss.move("arm_" + self.side, "pre_grasp")
+            if handle_arm.get_error_code():
+                sss.say(["script server error"])
             #sss.wait_for_input()
         return True
 
@@ -315,7 +323,11 @@ class MoveToTable(smach.State):
             rospy.logerr("invalid side: %s", self.side)
             return "failed"
         table_pose_offset.pose.orientation.w = 1
-        table_pose = self.listener.transformPose("map", table_pose_offset)
+        try:
+            table_pose = self.listener.transformPose("map", table_pose_offset)
+        except Exception, e:
+            rospy.logerr("could not transform pose. Exception: %s", str(e))
+            return "failed"
 
         sss.say(["move to table"])
         sss.move("base", [float(table_pose.pose.position.x), float(table_pose.pose.position.y), float(tf.transformations.euler_from_quaternion([table_pose.pose.orientation.x, table_pose.pose.orientation.y, table_pose.pose.orientation.z,table_pose.pose.orientation.w])[2])], mode=self.mode)
@@ -405,9 +417,9 @@ class SM(smach.StateMachine):
                     'failed':'ended'})
 
 if __name__=='__main__':
-    rospy.init_node('cob_introduction')
+    rospy.init_node('roses')
     sm = SM()
-    sis = smach_ros.IntrospectionServer('SM', sm, 'SM')
+    sis = smach_ros.IntrospectionServer('sm', sm, 'SM')
     sis.start()
     outcome = sm.execute()
     rospy.spin()
