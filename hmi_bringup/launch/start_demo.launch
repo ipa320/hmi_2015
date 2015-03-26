@@ -6,6 +6,7 @@
 
 	<include file="$(find hmi_bringup)/launch/upload_param.launch">
 	    <arg name="robot" value="$(arg robot)"/>
+	    <arg name="robot_env" value="$(arg robot_env)"/>
 	</include>
 
 	<include file="$(find hmi_table_localisation)/ros/launch/table_localisation.launch"/>
