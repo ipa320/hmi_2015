@@ -25,14 +25,23 @@ def bed_of_roses(prefix, nx, ny, x_offset_from_center, y_offset_from_center):
                 if j == NY-1:
                     continue
             #print "y_offset = ", i, j, y_offset
-            broadcast_tf(i*DISTANCE_BETWEEN_ROSES_X+x_offset_from_center,j*DISTANCE_BETWEEN_ROSES_Y+y_offset+y_offset_from_center,prefix+"_"+str(i)+"-"+str(j))
+            x = i*DISTANCE_BETWEEN_ROSES_X+x_offset_from_center
+            y = j*DISTANCE_BETWEEN_ROSES_Y+y_offset+y_offset_from_center
+            name = prefix+"_"+str(i)+"-"+str(j)
+            rose = [x,y,name]
+            roses.append(rose)
+    return roses
+            #broadcast_tf(i*DISTANCE_BETWEEN_ROSES_X+x_offset_from_center,j*DISTANCE_BETWEEN_ROSES_Y+y_offset+y_offset_from_center,prefix+"_"+str(i)+"-"+str(j))
 
 def broadcast_tf(x,y,name):
+    #print "x=",x
+    #print "y=",y
+    #print "name=",name
     br.sendTransform(
         (x, y, HEIGHT_ABOVE_TABLE_TOP),
          tf.transformations.quaternion_from_euler(0, 0, 0),
          rospy.Time.now(),
-         name,
+         str(name),
          "table_top")
 
 
@@ -40,6 +49,13 @@ if __name__ == '__main__':
     rospy.init_node('turtle_tf_broadcaster')
     br = tf.TransformBroadcaster()
     rate = rospy.Rate(10)
+    
+    roses = []
+    roses += bed_of_roses("rose_left", NX, NY, BED_X_OFFSET_FROM_CENTER, BED_Y_OFFSET_FROM_CENTER)
+    roses += bed_of_roses("rose_right", NX, NY, BED_X_OFFSET_FROM_CENTER, -BED_Y_OFFSET_FROM_CENTER - (NY-1)*DISTANCE_BETWEEN_ROSES_Y)
+
+    rospy.set_param("/hmi/roses",roses)
+
     while not rospy.is_shutdown():
         
         br.sendTransform(
@@ -49,13 +65,8 @@ if __name__ == '__main__':
              "table_top",
              "table_reference")
         
-        bed_of_roses("rose_left", NX, NY, BED_X_OFFSET_FROM_CENTER, BED_Y_OFFSET_FROM_CENTER)
-        bed_of_roses("rose_right", NX, NY, BED_X_OFFSET_FROM_CENTER, -BED_Y_OFFSET_FROM_CENTER - (NY-1)*DISTANCE_BETWEEN_ROSES_Y)
-        
-        
-        # testbed e325
-        #bed_of_roses("rose_right", NX, NY, -0.3, 0.3-NY*DY)
-        
+        for rose in roses:
+            #print "rose=", rose
+            broadcast_tf(rose[0],rose[1],rose[2])
 
-        
         rate.sleep()

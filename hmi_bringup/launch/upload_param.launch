@@ -7,7 +7,7 @@
 	<!-- send ROBOT parameters to parameter server -->
 	<rosparam command="load" ns="/script_server/arm_left" file="$(find hmi_bringup)/config/$(arg robot)/arm_left_joint_configurations.yaml"/>
 	<rosparam command="load" ns="/script_server/arm_right" file="$(find hmi_bringup)/config/$(arg robot)/arm_right_joint_configurations.yaml"/>
-
     <rosparam command="load" ns="/script_server/base" file="$(find hmi_bringup)/config/$(arg robot_env)/navigation_goals.yaml"/>
+    <rosparam command="load" ns="/script_server/hmi" file="$(find hmi_bringup)/config/hmi.yaml"/>
 
 </launch>
