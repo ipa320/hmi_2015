@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<launch>
+
+    <arg name="robot" default="$(optenv ROBOT !!NO_ROBOT_SET!!)"/>
+    <arg name="robot_env" default="$(optenv ROBOT_ENV !!NO_ROBOT_ENV_SET!!)"/>
+
+	<arg name="cob4-2-b1" default="cob4-2-b1"/>
+	<arg name="cob4-2-t1" default="cob4-2-t1"/>
+	<arg name="cob4-2-t2" default="cob4-2-t2"/>
+	<arg name="cob4-2-t3" default="cob4-2-t3"/>
+	<arg name="cob4-2-s1" default="cob4-2-s1"/>
+	<arg name="cob4-2-h1" default="cob4-2-h1"/>
+
+    <group>
+        <machine name="cob4-2-t2" address="$(arg cob4-2-t2)" env-loader="$(find cob_bringup)/env.sh" default="true"/>
+
+        <node pkg="hmi_manipulation" type="roses_tf_broadcaster.py" name="roses_tf_broadcaster" respawn="false" output="screen" />
+
+        <!-- start moveit -->
+        <include file="$(find cob_moveit_config)/launch/move_group.launch">
+            <arg name="robot" value="$(arg robot)"/>
+        </include>
+    </group>
+
+</launch>

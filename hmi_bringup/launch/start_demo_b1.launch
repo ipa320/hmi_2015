@@ -33,16 +33,4 @@
         </node>
     </group>
 
-
-    <group>
-        <machine name="cob4-2-t2" address="$(arg cob4-2-t2)" env-loader="$(find cob_bringup)/env.sh" default="true"/>
-
-        <node pkg="hmi_manipulation" type="roses_tf_broadcaster.py" name="roses_tf_broadcaster" respawn="false" output="screen" />
-
-        <!-- start moveit -->
-        <include file="$(find cob_moveit_config)/launch/move_group.launch">
-            <arg name="robot" value="$(arg robot)"/>
-        </include>
-    </group>
-
 </launch>
