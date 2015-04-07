@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<launch>
+
+	<arg name="robot" default="$(optenv ROBOT !!NO_ROBOT_SET!!)"/>
+
+	<!-- start rviz with configuration -->
+	<node pkg="rviz" type="rviz" name="$(anon rviz)" args="-d $(find hmi_bringup)/config/$(arg robot)/$(arg robot).rviz" respawn="false" output="screen" />
+
+</launch>
+
