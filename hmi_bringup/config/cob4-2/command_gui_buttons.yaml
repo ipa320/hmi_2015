@@ -53,3 +53,10 @@ group91:
     [intro,trigger,select_intro],
     [roses,trigger,select_roses],
     [ball,trigger,select_ball]]
+group92:
+  group_name: roses
+  component_name: hmi
+  buttons: [[left,trigger,handover_left],
+    [right,trigger,handover_right],
+    [middle,trigger,handover_middle],
+    [release,trigger,handover_release_rose]]
