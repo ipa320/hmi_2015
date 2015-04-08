@@ -59,4 +59,5 @@ group92:
   buttons: [[left,trigger,handover_left],
     [right,trigger,handover_right],
     [middle,trigger,handover_middle],
+    [offer,trigger,handover_offer_rose],
     [release,trigger,handover_release_rose]]
