@@ -11,10 +11,26 @@ from cob_srvs.srv import Trigger, TriggerRequest, TriggerResponse
 from simple_script_server import *
 sss = simple_script_server()
 
+def move_gripper(component_name, pos):
+    error_code = -1
+    counter = 0
+    while not rospy.is_shutdown() and error_code != 0:
+        print "trying to move", component_name, "to", pos, "retries: ", counter
+        handle = sss.move(component_name, pos)
+        error_code = handle.get_error_code()
+        if counter > 100:
+            rospy.logerr(component_name + "does not work any more. retries: " + str(counter))
+            sss.set_light("light_torso","red")
+            return False
+        counter += 1
+    return True
+
 ## -- Initiation
 class BallHandlingInit(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes=['succeeded','failed'])
+        self.client_pre_ball = rospy.ServiceProxy('/scenario/po1', Trigger)
+        self.client_hold_ball = rospy.ServiceProxy('/scenario/rec1', Trigger)
 
     def execute(self, userdata):
         #wait_for_services
@@ -35,15 +51,33 @@ class BallHandlingInit(smach.State):
         
         sss.move("base","middle",mode="linear")
         
-        handle_gripper_left = sss.move("gripper_left","home")
-        handle_gripper_right = sss.move("gripper_right","home")
-        handle_gripper_left.wait()
-        handle_gripper_right.wait()
+        #handle_gripper_left = sss.move("gripper_left","home")
+        #handle_gripper_right = sss.move("gripper_right","home")
+        #handle_gripper_left.wait()
+        #handle_gripper_right.wait()
+        move_gripper("gripper_left", "home")
+        move_gripper("gripper_right", "home")
 
-        handle_arm_left = sss.move("arm_left","home",False)
-        handle_arm_right = sss.move("arm_right","home",False)
+        handle_arm_left = sss.move("arm_left","side",False)
+        handle_arm_right = sss.move("arm_right","side",False)
         handle_arm_left.wait()
         handle_arm_right.wait()
+        
+        sss.set_light("light_base","cyan")
+        sss.set_light("light_torso","cyan")
+        
+        rospy.loginfo("Moving to PreBall")
+        if not self.call_service(self.client_pre_ball):
+            rospy.logerr("Movement to PreBall failed!")
+            return "failed"
+        
+        move_gripper("gripper_left", "spread")
+        move_gripper("gripper_right", "spread")
+        
+        rospy.loginfo("Moving to HoldBall")
+        if not self.call_service(self.client_hold_ball):
+            rospy.logerr("Movement to HoldBall failed!")
+            return "failed"
         
         return "succeeded"
 
@@ -58,6 +92,21 @@ class BallHandlingInit(smach.State):
             rospy.logerr("InterruptRequest received")
             return False
 
+    def call_service(self, proxy):
+        try:
+            req = TriggerRequest()
+            #print req
+            res = proxy(req)
+            #print res
+            if res.success.data:
+                rospy.loginfo("Service call successful: %s"%res.error_message.data)
+                return True
+            else:
+                rospy.logerr("Service not successful: %s"%res.error_message.data)
+                return False
+        except rospy.ServiceException, e:
+            print "Service call failed: %s"%e
+            return False
 
 
 class BallHandlingExecute(smach.State):
@@ -66,8 +115,6 @@ class BallHandlingExecute(smach.State):
         
         rospy.loginfo("BallHandlingExecute: INIT")
         
-        self.client_pre_ball = rospy.ServiceProxy('/scenario/po1', Trigger)
-        self.client_hold_ball = rospy.ServiceProxy('/scenario/rec1', Trigger)
         self.client_z = rospy.ServiceProxy('/scenario/rec2', Trigger)
         self.client_roll = rospy.ServiceProxy('/scenario/rec3', Trigger)
         self.client_cross = rospy.ServiceProxy('/scenario/rec4', Trigger)
@@ -79,16 +126,6 @@ class BallHandlingExecute(smach.State):
     def execute(self, userdata):
     
         rospy.loginfo("BallHandlingExecute: EXECUTE")
-        
-        rospy.loginfo("Moving to PreBall")
-        if not self.call_service(self.client_pre_ball):
-            rospy.logerr("Movement to PreBall failed!")
-            return "failed"
-            
-        rospy.loginfo("Moving to HoldBall")
-        if not self.call_service(self.client_hold_ball):
-            rospy.logerr("Movement to HoldBall failed!")
-            return "failed"
         
         rospy.loginfo("Starting Movement Z")
         if not self.call_service(self.client_z):
@@ -111,9 +148,9 @@ class BallHandlingExecute(smach.State):
     def call_service(self, proxy):
         try:
             req = TriggerRequest()
-            print req
+            #print req
             res = proxy(req)
-            print res
+            #print res
             if res.success.data:
                 rospy.loginfo("Service call successful: %s"%res.error_message.data)
                 return True
@@ -126,11 +163,12 @@ class BallHandlingExecute(smach.State):
         
 
 
-class BallHandlingCheckForStop(smach.State):
+class CheckForStop(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes=['stop','continue'])
         self.stop_requested = False
         rospy.Service('/hmi/stop_ball', Trigger, self.stop_cb)
+        rospy.Service('/hmi/continue_ball', Trigger, self.continue_cb)
             
     def execute(self, userdata):
         if self.stop_requested:
@@ -140,11 +178,18 @@ class BallHandlingCheckForStop(smach.State):
             return "continue"
 
     def stop_cb(self, req):
+        print "stop ball"
         self.stop_requested = True
         res = TriggerResponse()
         res.success.data = True
         return res
 
+    def continue_cb(self, req):
+        print "continue ball"
+        self.stop_requested = False
+        res = TriggerResponse()
+        res.success.data = True
+        return res
 
 class BallHandlingFinalize(smach.State):
     def __init__(self):
@@ -152,10 +197,14 @@ class BallHandlingFinalize(smach.State):
 
     def execute(self, userdata):
 
-        handle_gripper_left = sss.move("gripper_left","home")
-        handle_gripper_right = sss.move("gripper_right","home")
-        handle_gripper_left.wait()
-        handle_gripper_right.wait()
+        rospy.sleep(3) # time for removing the ball
+
+        #handle_gripper_left = sss.move("gripper_left","home")
+        #handle_gripper_right = sss.move("gripper_right","home")
+        #handle_gripper_left.wait()
+        #handle_gripper_right.wait()
+        move_gripper("gripper_left", "home")
+        move_gripper("gripper_right", "home")
 
         handle_arm_left = sss.move("arm_left","side",False)
         handle_arm_right = sss.move("arm_right","side",False)
@@ -177,7 +226,7 @@ class BallHandling(smach.StateMachine):
                 transitions={'succeeded':'CHECK_FOR_STOP',
                              'failed':'failed'})
 
-            smach.StateMachine.add('CHECK_FOR_STOP',BallHandlingCheckForStop(),
+            smach.StateMachine.add('CHECK_FOR_STOP',CheckForStop(),
                 transitions={'stop':'FINALIZE',
                              'continue':'EXECUTE'})
 

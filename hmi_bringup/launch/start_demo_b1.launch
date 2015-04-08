@@ -4,12 +4,12 @@
     <arg name="robot" default="$(optenv ROBOT !!NO_ROBOT_SET!!)"/>
     <arg name="robot_env" default="$(optenv ROBOT_ENV !!NO_ROBOT_ENV_SET!!)"/>
 
-	<arg name="cob4-2-b1" default="cob4-2-b1"/>
-	<arg name="cob4-2-t1" default="cob4-2-t1"/>
-	<arg name="cob4-2-t2" default="cob4-2-t2"/>
-	<arg name="cob4-2-t3" default="cob4-2-t3"/>
-	<arg name="cob4-2-s1" default="cob4-2-s1"/>
-	<arg name="cob4-2-h1" default="cob4-2-h1"/>
+    <arg name="cob4-2-b1" default="cob4-2-b1"/>
+    <arg name="cob4-2-t1" default="cob4-2-t1"/>
+    <arg name="cob4-2-t2" default="cob4-2-t2"/>
+    <arg name="cob4-2-t3" default="cob4-2-t3"/>
+    <arg name="cob4-2-s1" default="cob4-2-s1"/>
+    <arg name="cob4-2-h1" default="cob4-2-h1"/>
 
     <include file="$(find hmi_bringup)/launch/upload_param.launch">
         <arg name="robot" value="$(arg robot)"/>
@@ -25,6 +25,8 @@
         </include>
 
         <include file="$(find hmi_table_localisation)/ros/launch/table_localisation.launch"/>
+        
+        <include file="$(find cobvid)/launch/start_demo_berlin.launch"/>
         
         <!-- start android script_server -->
         <node pkg="cob_android_script_server" type="script_server_android.py" name="android_script_server" cwd="node" respawn="false" output="screen" >

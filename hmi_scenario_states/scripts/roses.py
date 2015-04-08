@@ -11,7 +11,9 @@ import random
 
 from geometry_msgs.msg import PoseStamped
 from moveit_commander import MoveGroupCommander, PlanningSceneInterface
-from moveit_msgs.msg import RobotState
+from moveit_msgs.msg import RobotState, AttachedCollisionObject, CollisionObject
+from shape_msgs.msg import SolidPrimitive
+import simple_moveit_interface as smi
 
 from simple_script_server import *
 sss = simple_script_server()
@@ -218,7 +220,7 @@ class RotateRose(smach.State):
         rospy.Timer(rospy.Duration(0.1), self.broadcast_tf)
         self.br = tf.TransformBroadcaster()
         self.angle_offset_roll = 0
-        self.min_angle_yaw = -30.0/180.0*math.pi
+        self.min_angle_yaw = 30.0/180.0*math.pi#-30.0/180.0*math.pi
         self.max_angle_yaw = 60.0/180.0*math.pi
         self.angle_step_yaw = 15.0/180.0*math.pi
         self.angle_offset_yaw = self.min_angle_yaw
@@ -229,10 +231,14 @@ class RotateRose(smach.State):
         angle_step_yaw = self.angle_step_yaw
         if userdata.active_arm == "left":
             self.angle_offset_roll = math.pi
-            #angle_step_yaw = -self.angle_step_yaw
+            angle_step_yaw = -self.angle_step_yaw
+            min_angle_yaw = -self.min_angle_yaw # turn around min
+            max_angle_yaw = -self.max_angle_yaw # turn around max
         elif userdata.active_arm == "right":
             self.angle_offset_roll = 0
-            #angle_step_yaw = self.angle_step_yaw
+            angle_step_yaw = self.angle_step_yaw
+            min_angle_yaw = self.min_angle_yaw
+            max_angle_yaw = self.max_angle_yaw
         else:
             rospy.logerr("invalid active_arm: %s", userdata.active_arm)
             sys.exit()
@@ -242,7 +248,7 @@ class RotateRose(smach.State):
             self.angle_offset_yaw = self.min_angle_yaw
             userdata.reset_rotation = False
         else:
-            if self.angle_offset_yaw <= -self.max_angle_yaw or self.angle_offset_yaw >= self.max_angle_yaw:
+            if math.fabs(self.angle_offset_yaw) > math.fabs(max_angle_yaw):
                 # reset angle_offset_yaw
                 self.angle_offset_yaw = self.min_angle_yaw
                 sss.say(["skipping rose"],False)
@@ -302,20 +308,15 @@ class GraspRose(smach.State):
         # initialize tf listener
         self.listener = tf.TransformListener()
         
-        ### Create a handle for the Planning Scene Interface
-        self.psi = PlanningSceneInterface()
-        ps = PoseStamped()
-        ps.header.frame_id = "table_top"
-        ps.pose.orientation.w = 1
-        filename = rospkg.RosPack().get_path("hmi_manipulation") + "/files/hmi_table.stl"
-        self.psi.add_mesh("table", ps, filename)
-        
         ### Create a handle for the Move Group Commander
         self.mgc_left = MoveGroupCommander("arm_left")
         self.mgc_right = MoveGroupCommander("arm_right")
         
-        self.eef_step = 0.01
-        self.jump_threshold = 2
+        ### Create a handle for the Planning Scene Interface
+        self.psi = PlanningSceneInterface()
+        
+        self.eef_step = 0.02
+        self.jump_threshold = 4
         
         rospy.sleep(1)
         
@@ -332,6 +333,15 @@ class GraspRose(smach.State):
 
 
     def plan_and_execute(self, userdata):
+        # add table
+        ps = PoseStamped()
+        ps.header.frame_id = "table_top"
+        ps.pose.position.x = -0.05
+        ps.pose.position.z = 0.05
+        ps.pose.orientation.w = 1
+        filename = rospkg.RosPack().get_path("hmi_manipulation") + "/files/hmi_table.stl"
+        self.psi.add_mesh("table", ps, filename)
+
         ### Set next (virtual) start state
         start_state = RobotState()
         (pre_grasp_config, error_code) = sss.compose_trajectory("arm_" + userdata.active_arm,"pre_grasp")
@@ -448,16 +458,71 @@ class GraspRose(smach.State):
             #sss.say(["no lift trajectory: skipping rose"], False)
             return False
 
+        ### Set next (virtual) start state
+        traj_lift_endpoint = traj_lift.joint_trajectory.points[-1]
+        start_state = RobotState()
+        start_state.joint_state.name = traj_lift.joint_trajectory.joint_names
+        start_state.joint_state.position = traj_lift_endpoint.positions
         
+        rose_primitive = SolidPrimitive()
+        rose_primitive.type = 3 #CYLINDER
+        rose_height = 0.4
+        rose_radius = 0.05
+        rose_primitive.dimensions.append(rose_height)
+        rose_primitive.dimensions.append(rose_radius)
+        
+        rose_pose = Pose()
+        rose_pose.orientation.w = 1.0
+        
+        rose_collision = CollisionObject()
+        rose_collision.header.frame_id = "gripper_"+userdata.active_arm+"_grasp_link"
+        rose_collision.id = "current_rose"
+        rose_collision.primitives.append(rose_primitive)
+        rose_collision.primitive_poses.append(rose_pose)
+        rose_collision.operation = 0 #ADD
+        
+        rose_attached = AttachedCollisionObject()
+        rose_attached.link_name = "gripper_"+userdata.active_arm+"_grasp_link"
+        rose_attached.object = rose_collision
+        rose_attached.touch_links = ["gripper_"+userdata.active_arm+"_base_link", "gripper_"+userdata.active_arm+"_camera_link", "gripper_"+userdata.active_arm+"_finger_1_link", "gripper_"+userdata.active_arm+"_finger_2_link", "gripper_"+userdata.active_arm+"_grasp_link", "gripper_"+userdata.active_arm+"_palm_link"]
+        
+        start_state.attached_collision_objects.append(rose_attached)
+        
+        start_state.is_diff = True
+        if userdata.active_arm == "left":
+            self.mgc_left.set_start_state(start_state)
+        elif userdata.active_arm == "right":
+            self.mgc_right.set_start_state(start_state)
+        else:
+            rospy.logerr("invalid arm_active")
+            return False
+        """
         #Plan retreat
+        pre_grasp_config = smi.get_goal_from_server("arm_"+userdata.active_arm, "pre_grasp")
+        #print pre_grasp_config
         
+        if pre_grasp_config == None:
+            rospy.logerr("GoalConfig not found on ParameterServer")
+            #sss.say(["GoalConfig not found on ParameterServer"], False)
+            return False
         
-
-
-
-
-
-
+        if userdata.active_arm == "left":
+            self.mgc_left.set_planner_id("RRTkConfigDefault")
+            traj_pre_grasp = self.mgc_left.plan(pre_grasp_config)
+        elif userdata.active_arm == "right":
+            self.mgc_right.set_planner_id("RRTkConfigDefault")
+            traj_pre_grasp = self.mgc_right.plan(pre_grasp_config)
+        else:
+            rospy.logerr("invalid arm_active")
+            return False
+        print traj_pre_grasp
+        
+        if traj_pre_grasp == None:
+            rospy.logerr("Unable to plan pre_grasp trajectory")
+            #sss.say(["no pre_grasp trajectory: skipping rose"], False)
+            return False
+        """
+        #if not (frac_approach == 1.0 and frac_grasp == 1.0 and frac_lift == 1.0 and not traj_pre_grasp == None):
         if not (frac_approach == 1.0 and frac_grasp == 1.0 and frac_lift == 1.0):
             rospy.logerr("Unable to plan whole grasping trajectory")
             sss.say(["skipping rose"], False)
@@ -497,8 +562,11 @@ class GraspRose(smach.State):
                 rospy.loginfo("lift")
                 self.mgc_left.execute(traj_lift)
                 #sss.wait_for_input()
-                rospy.sleep(1)
-                handle_arm = sss.move("arm_" + userdata.active_arm, "pre_grasp")
+                #self.mgc_left.execute(traj_pre_grasp)
+                #rospy.sleep(1)
+                sss.move("base","middle", mode="linear", blocking=False)
+                #rospy.sleep(0.5) #wait for base to move away from table
+                handle_arm = sss.move("arm_" + userdata.active_arm, "retreat")
             elif userdata.active_arm == "right":
                 self.mgc_right.execute(traj_approach)
                 #sss.move("gripper_" + userdata.active_arm, "open")
@@ -512,17 +580,20 @@ class GraspRose(smach.State):
                 rospy.loginfo("lift")
                 self.mgc_right.execute(traj_lift)
                 #sss.wait_for_input()
-                rospy.sleep(1)
-                handle_arm = sss.move("arm_" + userdata.active_arm, "pre_grasp")
+                #self.mgc_right.execute(traj_pre_grasp)
+                #rospy.sleep(1)
+                sss.move("base","middle", mode="linear", blocking=False)
+                #rospy.sleep(0.5) #wait for base to move away from table
+                handle_arm = sss.move("arm_" + userdata.active_arm, "retreat")
             else:
                 rospy.logerr("invalid arm_active")
                 return False
             
             
-            if handle_arm.get_error_code():
-                #sss.say(["script server error"])
-                rospy.logerr("script server error")
-                sss.set_light("light_base","red")
+            #if handle_arm.get_error_code():
+            #    #sss.say(["script server error"])
+            #    rospy.logerr("script server error")
+            #    sss.set_light("light_base","red")
             #sss.wait_for_input()
         return True
 
@@ -704,7 +775,8 @@ class Roses(smach.StateMachine):
                     'failed':'CHECK_FOR_STOP'})
 
             smach.StateMachine.add('GRASP_ROSE',GraspRose(),
-                transitions={'succeeded':'HANDOVER',
+                #transitions={'succeeded':'HANDOVER',
+                transitions={'succeeded':'CHECK_FOR_STOP',
                     'failed':'ROTATE_ROSE'})
 
             # handover
