@@ -1,0 +1,3 @@
+buttons: [[middle,move,middle],
+  [tableleft,move,table_left],
+  [tableright,move,table_right]]

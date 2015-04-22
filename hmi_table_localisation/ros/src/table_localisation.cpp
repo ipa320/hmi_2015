@@ -102,7 +102,7 @@ void TableLocalization::callback(const sensor_msgs::LaserScan::ConstPtr& laser_s
 	}
 
 #ifdef DEBUG_OUTPUT
-	std::cout << "Segments with high intensity:\n";
+	std::cout << "Segments with high intensity\t " << segments.size() << ":\n";
 	for (size_t i=0; i<segments.size(); ++i)
 	{
 		for (size_t j=0; j<segments[i].size(); ++j)
