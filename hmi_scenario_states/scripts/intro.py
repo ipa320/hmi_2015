@@ -17,7 +17,7 @@ def wave(side):
     sss.move("arm_" + side,"wave2")
     sss.move("arm_" + side,"wave1")
     sss.move("arm_" + side,"wave2")
-    sss.move("arm_" + side,"side")
+    sss.move("arm_" + side,"side", False)
 
 def move_gripper(component_name, pos):
     error_code = -1
@@ -39,7 +39,19 @@ class Init(smach.State):
             output_keys=['stop_requested'])
 
     def execute(self, userdata):
-
+        sss.set_light("light_base","green")
+        sss.set_light("light_torso","green")
+        rospy.sleep(0.5)
+        sss.set_light("light_base","cyan")
+        sss.set_light("light_torso","cyan")
+        rospy.sleep(0.5)
+        sss.set_light("light_base","green")
+        sss.set_light("light_torso","green")
+        rospy.sleep(0.5)
+        sss.set_light("light_base","cyan")
+        sss.set_light("light_torso","cyan")
+        rospy.sleep(0.5)
+        
         sss.move("base","middle",mode="linear")
 
         #handle_gripper_left = sss.move("gripper_left","home")
@@ -147,57 +159,62 @@ class CobIntroduction(smach.State):
             sss.move("arm_left", "side")
 
             # sync
-            sss.say(["Hello and welcome to my presentation, my name is Care o bot. I am a mobile service robot build by Fraunhofer I. P. A., in Stuttgart."], False)
-            sss.move_base_rel("base", [0, 0, -0.78], False)
-            rospy.sleep(0.5)
+            sss.say(["Hello and welcome to my presentation, my name is Care o bot. I am a mobile service robot build by Fraunhofer I. P. A. and Schunk."], False)
+            sss.move_base_rel("base", [0, 0, -0.7], False)
             #sss.move("arm_right", "wave_hmi")
             wave("right")
 
             # sync
 
-            sss.say(["I am a gentleman, so dont be afraid."], False)
-            sss.move_base_rel("base", [0, 0, 1.3], False)
+            sss.move_base_rel("base", [0, 0, 1.4])
 
-            rospy.sleep(1)
-            sss.say(["I have a wide range of services. I can assist you at home or serve food and drinks in restaurants or hotels. In hospitals and care facilities I can give support in various delivery tasks."], False) #TODO show renderings on head display while explaining application domanis
-            #handle_arm_left = sss.move("arm_left", "wave_hmi", False)
+            #sss.say(["I am a gentleman, so dont be afraid."], False)
+            #sss.say(["Dont be afraid, i am a gentleman."])
+            #sss.say(["I have a wide range of services. I can assist you at home or serve food and drinks in restaurants or hotels. In hospitals and care facilities I can give support in various delivery tasks."], False) 
+            
+            sss.say(["Dont be afraid, i am a gentleman. I have a wide range of services. At home I could assist you and serve drinks or work in hotels or restaurants. In hospitals and care facilities there are a lot of delivery task that I could take over."], False)
             wave("left")
             
-            rospy.sleep(8)
+            #TODO show renderings on head display while explaining application domanis
+            #handle_arm_left = sss.move("arm_left", "wave_hmi", False)
+            #wave("left")
 
-            sss.move_base_rel("base", [0, 0, -0.78])
+            #sss.move_base_rel("base", [0, 0, -0.5])
+            sss.move("base","middle",mode="linear")
             #handle_arm_left.wait()
             
             # sync
+            rospy.sleep(1.0)
             n = n+1
 
         if n == 1:
-            handle_arm_right = sss.move("arm_right","point2head", False)
-
             # Explain lights & display
-            sss.set_mimic("mimic",["laughing",0,1])
-            sss.say(["I can use my eyes for interacting with humans."])
-            rospy.sleep(2)
-            sss.move("arm_left","point2base", False)
-            sss.say(["and express my mood by changing color in my torso and base."])
-            handle_arm_right.wait()
-
-            # sync
+            sss.set_mimic("mimic", ["laughing",0,2], False)
+            sss.move("arm_right","point2head")
+            sss.set_mimic("mimic", ["blinking_right",0,1], False)
+            sss.say(["When I interact with humans. I can use my eyes to express my mood."])
+            #sss.set_mimic("mimic","laughing")
             rospy.sleep(0.5)
-            sss.set_light("light_base","yellow", False)
-            sss.set_light("light_torso","yellow", False)
-            handle_say = sss.say(["If I light up in yellow that means that I am moving my base or my arms, so please pay attention."], False)
-            sss.move_base_rel("base", [0, 0, -0.35], False)
-            sss.set_mimic("mimic", ["busy",0,1], False)
-            rospy.sleep(1)
-            sss.move("arm_right","point2base", False)
-
-            handle_say.wait()
             
-            sss.move_base_rel("base", [0, 0, 0.35], False)
-            rospy.sleep(3)
+            sss.move("arm_right","point2base", False)
+            sss.say(["By chaning the color in my torso and base I can provide information about my current status."], False)
+            sss.move("arm_left","point2base")
+            sss.set_mimic("mimic","happy")
 
             # sync
+            handle_light = sss.set_light("light_base","yellow", False)
+            sss.set_light("light_torso","yellow", False)
+            sss.set_mimic("mimic", ["busy",0,1], False)
+            sss.say(["If I light up in yellow that means that I am moving my base or my arms, so please pay attention."], False)
+            sss.move_base_rel("base", [0, 0, -0.50])
+            #rospy.sleep(0.5)
+            
+            sss.move("base","middle",mode="linear")
+            #sss.move_base_rel("base", [0, 0, 0.50], False)
+            #rospy.sleep(3)
+
+            # sync
+            handle_light.wait()
             sss.set_light("light_base","red", False)
             sss.set_light("light_torso","red", False)
             handle_say = sss.say(["If you see me in red, there is an error and I need help. But dont worry, I feel good right now, this is only to show you my colors. I hope you will never see me in an error state."], False)
@@ -214,40 +231,48 @@ class CobIntroduction(smach.State):
             handle_say.wait()
 
             # sync
-
-
-            rospy.sleep(4)
-            sss.say(["One of my technical highlights, is the modularity. Let me explain my different modules."])         			
-
+            rospy.sleep(1)
             n = n+1
 
         if n == 2: 
             # :: 1.Explaing modules(base)
-            rospy.loginfo("Explaining modules(base)")       
-            handle_say = sss.say(["I consist of 4 elementary parts. base, torso, arms and head. I will start with my base."], False)
+            rospy.loginfo("Explaining modules(base)")
+            sss.say(["One of my technical highlights, is the modularity. Let me explain my different modules."])
+            handle_say = sss.say(["I consist of 4 elementary parts. base. torso. arms and head."])
             sss.set_light("light_torso", "yellow", False)
             sss.set_light("light_base", "yellow")
-            sss.move("arm_right", "point2base")
             handle_say.wait()
-            sss.say(["I can move forward and backward."], False)
-            sss.move("arm_right", "side",False)
-            sss.move_base_rel("base", [0.1, 0, 0])
-            sss.move_base_rel("base", [-0.1, 0, 0])
-            sss.say(["or sideways."])
-            sss.move_base_rel("base", [0, 0.1, 0])
-            sss.move_base_rel("base", [0, -0.1, 0])
-            sss.move_base_rel("base", [0, -0.1, 0])
+            
+            sss.say(["I will start with my base."], False)
+            sss.move("arm_right", "point2base")            
+            
+            sss.say(["I can move forward."], False)
+            #sss.move("arm_right", "side",False)
+            sss.move_base_rel("base", [0.4, 0, 0])
+            sss.say(["and backward too."], False)
+            sss.move("base","middle",mode="linear")
+            sss.say(["Sideways is easy for me."], False)
+            #sss.say(["Ha ha your car can not do this. Right?"], False)
+            sss.move_base_rel("base", [0, 0.4, 0])
+            sss.move_base_rel("base", [0, -0.8, 0])
+            sss.move("base","middle",mode="linear")
             #sss.say(["and back."], False)
-            sss.move_base_rel("base", [0, 0.1, 0])
             sss.say(["I am also capable to turn on the spot like this."], False)
-            sss.move_base_rel("base", [0, 0, 0.5])
-            sss.move_base_rel("base", [0, 0, -0.5])
+            sss.move_base_rel("base", [0, 0, 0.6])
+            rospy.sleep(0.5)
+            #sss.move_base_rel("base", [0, 0, -0.3])
+            sss.move("base","middle",mode="linear")
             sss.set_light("light_base", "cyan", False)
             sss.set_light("light_torso", "cyan")
 
-            rospy.sleep(0.5)
-            sss.say(["Using my safety laser scanners in the base I can safely navigate between moving humans and objects."]) #therefore we can use the same workspace and environment together."])  
-            rospy.sleep(4)
+            rospy.sleep(1.0)
+            sss.say(["Using my safety laser scanners in the base I can safely navigate between moving humans and objects."], False) #therefore we can use the same workspace and environment together."])
+            sss.move("arm_right", "point2laser")
+            rospy.sleep(1.0)
+            sss.move("arm_right", "point2base")
+            
+            #sync
+            rospy.sleep(1)
             n = n+1
         
         if n == 3:
@@ -255,17 +280,23 @@ class CobIntroduction(smach.State):
             rospy.loginfo("Explaining modules(torso)")
             sss.set_light("light_base", "yellow", False)
             sss.set_light("light_torso", "yellow")
-            sss.say(["The next module is my torso, you have already seen the lights i can change and use to interact with you."], False)
-            sss.move("arm_right","point2chest")
-            sss.move("arm_right","draw_torso", False)
+            rospy.sleep(1.0)
+            sss.say(["The next module is my torso. In the future I will be able to move it."], False)
+            #sss.move("arm_right","point2chest")
+            #sss.move("arm_right","draw_torso", False)
             #sss.say(["My torso also is agile and can swing around, allowing me to grab objects from the floor or shelfs."])
-            sss.move("arm_right","point2camera")
+            #sss.move("arm_right","point2camera")
+            sss.move("arm_right","point2torso_low")
+            sss.move("arm_right","point2torso_up")
+            sss.move("arm_right","point2torso_low")            
             sss.set_light("light_base","cyan", False)
             sss.set_light("light_torso", "cyan", False)
             sss.say(["Here i have 3d cameras helping me to navigate and recognize obstacles."])
-            rospy.sleep(4)
+            
+            #sync
+            #rospy.sleep(1)
             n = n+1
-           # sys.exit()
+            #sys.exit()
 
         if n == 4:
 			# :: 3.Explain modules (arms)
@@ -276,11 +307,11 @@ class CobIntroduction(smach.State):
             #folding_right_handle = sss.move("arm_right",["side", "reverse_folded", "side", "folded"], False)
             #folding_left_handle = sss.move("arm_left",["side", "reverse_folded", "side", "folded"], False) 
             
-            sss.say(["As you can see, i have two flexible arms. I can use them independently."],False)
+            sss.say(["The best part of me: My two flexible arms. I can use them independently or synchronized."],False)
             rospy.loginfo("Beginning arena-like wave")
             sss.move("arm_right", [[1.5, 0, 0, 0, 0, 0, 0]],False)
             sss.move("arm_left", [[-1.5, 0, 0, 0, 0, 0, 0]])
-            sss.say(["My arms and joints were developed in cooperation with Schoonk and follow the shape of human arms."],False)
+            sss.say(["My arms and joints were developed in cooperation with Schunk and follow the shape of human arms."],False)
             sss.move("arm_right", [[1.5, -0.3, 0, 1, 0, -0.7, 0]])
             sss.say(["and thanks to sensors i am able to share the same workspace with humans."],False)
             sss.move("arm_left", [[-1.5, 0.3, 0, -1, 0, 0.7, 0]], False)
@@ -297,27 +328,34 @@ class CobIntroduction(smach.State):
             sss.set_light("light_torso","cyan")
             rospy.sleep(1)
 
-            sss.say(["Not only do i have arms, but also grippers."])
+            sss.say(["At the end of my arms, I have grippers."])
             sss.set_light("light_base","yellow", False)
             sss.set_light("light_torso","yellow")
-            sss.move_base_rel("base",[0,0,-0.3])
             sss.say(["Combined with my in-gripper 3D-Camera i am able to recognize objects and manipulate or grab them."],False)
+            sss.move_base_rel("base",[0,0,-0.3],False)
             sss.move("arm_right",[[1.7642137145009082, 1.2919974320813223, -0.82794929056107, -1.8777473823431394, 0.0, 0.0, 0.0]])
-
             sss.move("gripper_right","open")
+            
+            sss.move("arm_right",[[1.7642137145009082, 1.2919799787888024, -1.6467705091342097, -1.8777473823431394, 0.0, 0.0, 0.0]],False)
             sss.move_base_rel("base",[0,0,0.6], False)
+            sss.move("gripper_right","home")
+            sss.move("gripper_right","open")
             #sss.move("arm_right",[[1.2, 1.2, -1.0472, -1.6581, -1.0472, -0.6981, 0.5]], False)
             #sss.move("gripper_left","open")
-            sss.move("arm_right",[[1.7642137145009082, 1.2919799787888024, -1.6467705091342097, -1.8777473823431394, 0.0, 0.0, 0.0]],False)
-            sss.say(["As you can see, I can not only entertain, but actually support your work or lifestyle by grasping and carrying small objects."])
+
+            rospy.sleep(1.0)
+            sss.say(["As you can see, I can not only entertain, but actually support your work or lifestyle by grasping and carrying small objects."], False)
             sss.move("gripper_right","home", False)
-            sss.move_base_rel("base",[0,0,-0.3], False)
+            sss.move("base","middle",mode="linear")
+            #sss.move_base_rel("base",[0,0,-0.3], False)
             sss.move("arm_right","side")
+            
             #sss.move("gripper_left","home")
             sss.set_light("light_base","cyan", False)
             sss.set_light("light_torso","cyan")
-            rospy.sleep(3)
             
+            #sync
+            rospy.sleep(1)
             n = n+1
 
         if n == 5:
@@ -326,68 +364,74 @@ class CobIntroduction(smach.State):
             sss.set_light("light_torso","yellow", False)
             sss.set_light("light_base", "yellow")
             sss.say(["And finally, something i always forget, my head."],False)
-            handle_arm = sss.move("arm_right", "point2head",False)
+            handle_arm = sss.move("arm_right", "point2head")
             sss.set_mimic("mimic",["surprised",0,3])
             #sss.move("arm_right", "side")
             sss.set_mimic("mimic","happy")
-            rospy.sleep(3)
-            handle_say = sss.say(["To detect objects and recognize people i can use my sensor ring allowing me to operate in dynamic human environments."], False)
+            #rospy.sleep(3)
+            
+            sss.move("arm_right", "point2sensorring", False)
+            sss.say(["In the black ring there can be various sensors. At the moment I have a 3D camera to detect objects and recognize people."])
+            sss.move("arm_right", "point2head")
             #sss.move("sensorring","left")
             #sss.move("sensorring","right")
             #sss.move("sensorring","front")
-            handle_arm.wait()
-            rospy.sleep(4)
-            handle_say.wait()
+            #rospy.sleep(4)
             sss.move("arm_right","side")
             sss.set_light("light_torso","cyan", False)
             sss.set_light("light_base","cyan", False)
 
+            #sync
+            rospy.sleep(1)
             n = n+1
 
         if n == 6:
             # :: 5.Software highlights
-            sss.say(["Now that you have seen my hardware highlights, I will tell you something about my software."])
+            sss.say(["Now that you have seen my hardware highlights, I will tell you something about my software."], False)
             sss.set_mimic("mimic",["blinking_right",0,2])
-            sss.move_base_rel("base",[0.1,0,0], False)
-            sss.say(["I am powered by the Open Source Robot Operating System."])
-            sss.move_base_rel("base",[0,0,0.5], False)
-            sss.say(["This architecture allows to upgrade my software and learn new skills."])
-            sss.move_base_rel("base",[0,0,-0.5])
+            sss.set_light("light_torso","yellow", False)
+            sss.set_light("light_base","yellow", False)
+            sss.move_base_rel("base",[0.5,0.5,0])
+            sss.say(["I am powered by the Open Source Robot Operating System."], False)
+            sss.move_base_rel("base",[0,-1.0,0])
+            sss.say(["This architecture allows to upgrade my software and learn new skills."], False)
+            sss.set_mimic("mimic",["yes",0,3])
+            sss.move("base","middle",mode="linear")
+            #sss.move_base_rel("base",[-0.3,0,0], False)
+            sss.say(["You can buy me as a complete package with customized module configurations, for example special sensors or different degrees of freedom."])
+            #sss.say(["For further informations please visit my website care minus o minus bot minus four dot com"])
+            
             sss.set_light("light_torso","cyan", False)
             sss.set_light("light_base","cyan", False)
-            sss.set_mimic("mimic",["yes",0,3])
-            sss.move_base_rel("base",[-0.1,0,0], False)
-            sss.say(["You can buy me as a complete package with customized module configurations, for example special sensors or different degrees of freedom."])
-            rospy.sleep(4)
-
-            #sss.say(["For further informations please visit my website care minus o minus bot minus four dot com"])
-                   
+            #sync
+            #rospy.sleep(1)
             
         ## :: Final
 
         rospy.loginfo("Final/Exit scene reached")
-        sss.set_mimic("mimic",["happy", 0, 4])
+        sss.set_mimic("mimic","happy", False)
         sss.say(["Now, my presentation has come to an end."])
 
         sss.set_light("light_torso", "yellow", False)
         sss.set_light("light_base","yellow")
-        sss.say(["Thank you for your interest, please ask my human colleagues for further information or take one of my bussiness cards from the desk."])
-        sss.move_base_rel("base", [0, 0, 0.5])
+        sss.say(["Thank you for your interest, please ask my human colleagues for further information or take one of my bussiness cards from the desk."], False)
+        sss.move_base_rel("base", [0, 0, 0.5], False)
         #sss.move("arm_right", "wave_hmi",False)
         wave("right")
+        sss.say(["Enjoy your stay."], False)
         #sss.move("arm_left", "wave_hmi",False)
         wave("left")
-        rospy.sleep(2)
+        #rospy.sleep(2)
         sss.set_mimic("mimic","happy")
         sss.say(["Goodbye, and have a nice day."])
-        sss.move_base_rel("base", [0, 0, -0.8])
+        sss.move_base_rel("base", [0, 0, -0.8], False)
         #sss.say(["Thank you for your attention"])
         sss.move("arm_right", "side",False)
         sss.move("arm_left", "side",False)
-        sss.move_base_rel("base", [0, 0, 0.5])
+        sss.move("base","middle",mode="linear")
+        #sss.move_base_rel("base", [0, 0, 0.5])
         sss.set_light("light_torso","cyan",False)
         sss.set_light("light_base","cyan")
-
 
         return "succeeded"
 

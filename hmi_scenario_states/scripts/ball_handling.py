@@ -11,6 +11,110 @@ from cob_srvs.srv import Trigger, TriggerRequest, TriggerResponse
 from simple_script_server import *
 sss = simple_script_server()
 
+
+def grasp_ball(req):
+    print "grasp"
+    my_client_pre_ball = rospy.ServiceProxy('/scenario/po1', Trigger)
+    my_client_hold_ball = rospy.ServiceProxy('/scenario/rec1', Trigger)
+
+    #wait_for_services
+    if not wait_for_service('/scenario/po1', 5.0): #pre_ball_start
+        res = TriggerResponse()
+        res.success.data = False
+        return res
+    if not wait_for_service('/scenario/rec1', 5.0): #hold_ball
+        res = TriggerResponse()
+        res.success.data = False
+        return res
+    
+    rospy.loginfo("All Services available!")
+
+    move_gripper("gripper_left", "home")
+    move_gripper("gripper_right", "home")
+
+    handle_arm_left = sss.move("arm_left","side",False)
+    handle_arm_right = sss.move("arm_right","side",False)
+    handle_arm_left.wait()
+    handle_arm_right.wait()
+    
+    sss.set_light("light_base","cyan")
+    sss.set_light("light_torso","cyan")
+    
+    rospy.loginfo("Moving to PreBall")
+    if not call_service(my_client_pre_ball):
+        rospy.logerr("Movement to PreBall failed!")
+        res = TriggerResponse()
+        res.success.data = False
+        return res
+    
+    move_gripper("gripper_left", "spread")
+    move_gripper("gripper_right", "spread")
+    
+    rospy.loginfo("Moving to HoldBall")
+    if not call_service(my_client_hold_ball):
+        rospy.logerr("Movement to HoldBall failed!")
+        res = TriggerResponse()
+        res.success.data = False
+        return res
+    
+    res = TriggerResponse()
+    res.success.data = True
+    return res
+
+#def grasp_ball(req):
+#    print "grasp"
+#    handle_arm_left = sss.move("arm_left","side",False)
+#    handle_arm_right = sss.move("arm_right","side",False)
+#    handle_arm_left.wait()
+#    handle_arm_right.wait()
+#
+#    handle_arm_left = sss.move("arm_left","pre_ball",False)
+#    handle_arm_right = sss.move("arm_right","pre_ball",False)
+#    move_gripper("gripper_left", "spread")
+#    move_gripper("gripper_right", "spread")
+#    handle_arm_left.wait()
+#    handle_arm_right.wait()
+#
+#    handle_arm_left = sss.move("arm_left","hold_ball",False)
+#    handle_arm_right = sss.move("arm_right","hold_ball",False)
+#    handle_arm_left.wait()
+#    handle_arm_right.wait()
+#    
+#    res = TriggerResponse()
+#    res.success.data = True
+#    return res
+
+def release_ball(req):
+    print "release ball"
+    sss.set_light("light_base","blue")
+    sss.set_light("light_torso","blue")
+    rospy.sleep(1.0)
+    sss.set_light("light_base","cyan")
+    sss.set_light("light_torso","cyan")
+    rospy.sleep(1.0)
+    sss.set_light("light_base","blue")
+    sss.set_light("light_torso","blue")
+    rospy.sleep(1.0)
+    sss.set_light("light_base","cyan")
+    sss.set_light("light_torso","cyan")
+    rospy.sleep(1.0)
+
+    #handle_arm_left = sss.move("arm_left","pre_ball",False)
+    #handle_arm_right = sss.move("arm_right","pre_ball",False)
+    #handle_arm_left.wait()
+    #handle_arm_right.wait()
+
+    handle_arm_left = sss.move("arm_left","side",False)
+    handle_arm_right = sss.move("arm_right","side",False)
+    move_gripper("gripper_left", "home")
+    move_gripper("gripper_right", "home")
+    handle_arm_left.wait()
+    handle_arm_right.wait()
+
+    res = TriggerResponse()
+    res.success.data = True
+    return res
+
 def move_gripper(component_name, pos):
     error_code = -1
     counter = 0
@@ -18,12 +122,47 @@ def move_gripper(component_name, pos):
         print "trying to move", component_name, "to", pos, "retries: ", counter
         handle = sss.move(component_name, pos)
         error_code = handle.get_error_code()
+        if counter > 5:
+        		sss.set_light("light_torso","blue")
         if counter > 100:
-            rospy.logerr(component_name + "does not work any more. retries: " + str(counter))
             sss.set_light("light_torso","red")
+            sss.say([component_name + " error, please help me"])
+            rospy.logerr(component_name + "does not work any more. retries: " + str(counter) + ". Please reset USB connection and press <ENTER>.")
+            sss.wait_for_input()
+            sss.set_light("light_torso","cyan")
             return False
         counter += 1
+    sss.set_light("light_torso","cyan")
     return True
+
+
+def wait_for_service(srv_name, timeout):
+    try:
+        rospy.wait_for_service(srv_name, timeout)
+        return True
+    except rospy.ROSException, e:
+        rospy.logerr("Service %s not available within timout!" %srv_name)
+        return False
+    except rospy.ROSInterruptException, e:
+        rospy.logerr("InterruptRequest received")
+        return False
+
+def call_service(proxy):
+    try:
+        req = TriggerRequest()
+        #print req
+        res = proxy(req)
+        #print res
+        if res.success.data:
+            rospy.loginfo("Service call successful: %s"%res.error_message.data)
+            return True
+        else:
+            rospy.logerr("Service not successful: %s"%res.error_message.data)
+            return False
+    except rospy.ServiceException, e:
+        print "Service call failed: %s"%e
+        return False
+
 
 ## -- Initiation
 class BallHandlingInit(smach.State):
@@ -33,18 +172,31 @@ class BallHandlingInit(smach.State):
         self.client_hold_ball = rospy.ServiceProxy('/scenario/rec1', Trigger)
 
     def execute(self, userdata):
+        sss.set_light("light_base","green")
+        sss.set_light("light_torso","green")
+        rospy.sleep(0.5)
+        sss.set_light("light_base","cyan")
+        sss.set_light("light_torso","cyan")
+        rospy.sleep(0.5)
+        sss.set_light("light_base","green")
+        sss.set_light("light_torso","green")
+        rospy.sleep(0.5)
+        sss.set_light("light_base","cyan")
+        sss.set_light("light_torso","cyan")
+        rospy.sleep(0.5)
+        
         #wait_for_services
-        if not self.wait_for_service('/scenario/po1', 5.0): #pre_ball_start
+        if not wait_for_service('/scenario/po1', 5.0): #pre_ball_start
             return "failed"
-        if not self.wait_for_service('/scenario/rec1', 5.0): #hold_ball
+        if not wait_for_service('/scenario/rec1', 5.0): #hold_ball
             return "failed"
-        if not self.wait_for_service('/scenario/rec2', 5.0): #z
+        if not wait_for_service('/scenario/rec2', 5.0): #z
             return "failed"
-        if not self.wait_for_service('/scenario/rec3', 5.0): #roll
+        if not wait_for_service('/scenario/rec3', 5.0): #roll
             return "failed"
-        if not self.wait_for_service('/scenario/rec4', 5.0): #cross
+        if not wait_for_service('/scenario/rec4', 5.0): #cross
             return "failed"
-        if not self.wait_for_service('/scenario/rec5', 5.0): #circ8
+        if not wait_for_service('/scenario/rec5', 5.0): #circ8
             return "failed"
         
         rospy.loginfo("All Services available!")
@@ -67,7 +219,7 @@ class BallHandlingInit(smach.State):
         sss.set_light("light_torso","cyan")
         
         rospy.loginfo("Moving to PreBall")
-        if not self.call_service(self.client_pre_ball):
+        if not call_service(self.client_pre_ball):
             rospy.logerr("Movement to PreBall failed!")
             return "failed"
         
@@ -75,38 +227,11 @@ class BallHandlingInit(smach.State):
         move_gripper("gripper_right", "spread")
         
         rospy.loginfo("Moving to HoldBall")
-        if not self.call_service(self.client_hold_ball):
+        if not call_service(self.client_hold_ball):
             rospy.logerr("Movement to HoldBall failed!")
             return "failed"
         
         return "succeeded"
-
-    def wait_for_service(self, srv_name, timeout):
-        try:
-            rospy.wait_for_service(srv_name, timeout)
-            return True
-        except rospy.ROSException, e:
-            rospy.logerr("Service %s not available within timout!" %srv_name)
-            return False
-        except rospy.ROSInterruptException, e:
-            rospy.logerr("InterruptRequest received")
-            return False
-
-    def call_service(self, proxy):
-        try:
-            req = TriggerRequest()
-            #print req
-            res = proxy(req)
-            #print res
-            if res.success.data:
-                rospy.loginfo("Service call successful: %s"%res.error_message.data)
-                return True
-            else:
-                rospy.logerr("Service not successful: %s"%res.error_message.data)
-                return False
-        except rospy.ServiceException, e:
-            print "Service call failed: %s"%e
-            return False
 
 
 class BallHandlingExecute(smach.State):
@@ -128,39 +253,22 @@ class BallHandlingExecute(smach.State):
         rospy.loginfo("BallHandlingExecute: EXECUTE")
         
         rospy.loginfo("Starting Movement Z")
-        if not self.call_service(self.client_z):
+        if not call_service(self.client_z):
             rospy.logerr("Movement Z failed!")
             return "failed"
         
         rospy.loginfo("Starting Movement CROSS")
-        if not self.call_service(self.client_cross):
+        if not call_service(self.client_cross):
             rospy.logerr("Movement CROSS failed!")
             return "failed"
         
         rospy.loginfo("Starting Movement CIRC8")
-        if not self.call_service(self.client_circ8):
+        if not call_service(self.client_circ8):
             rospy.logerr("Movement CIRC8 failed!")
             return "failed"
             
         rospy.loginfo("All Movements successfull! BallHandling finished!")
         return "succeeded"
-    
-    def call_service(self, proxy):
-        try:
-            req = TriggerRequest()
-            #print req
-            res = proxy(req)
-            #print res
-            if res.success.data:
-                rospy.loginfo("Service call successful: %s"%res.error_message.data)
-                return True
-            else:
-                rospy.logerr("Service not successful: %s"%res.error_message.data)
-                return False
-        except rospy.ServiceException, e:
-            print "Service call failed: %s"%e
-            return False
-        
 
 
 class CheckForStop(smach.State):
@@ -169,6 +277,10 @@ class CheckForStop(smach.State):
         self.stop_requested = False
         rospy.Service('/hmi/stop_ball', Trigger, self.stop_cb)
         rospy.Service('/hmi/continue_ball', Trigger, self.continue_cb)
+        
+        #lehmann
+        rospy.Service('/hmi/grasp_ball', Trigger, grasp_ball)
+        rospy.Service('/hmi/release_ball', Trigger, release_ball)
             
     def execute(self, userdata):
         if self.stop_requested:

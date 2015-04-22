@@ -1,0 +1,8 @@
+#[x,y,theta]
+middle: [-0.956, 0.218, -0.193]
+table_left: [-0.8, 0.473, -0.17]
+table_right: [-0.526, -1.148, -0.225]
+
+handover_middle: [-0.956, 0.218, -0.193]
+handover_left: [-0.8, 0.473, -0.17]
+handover_right: [-0.526, -1.148, -0.225]

@@ -10,6 +10,30 @@ group1:
   buttons: [[stop,stop,omni],
     [init,trigger,init],
     [recover,trigger,recover]]
+
+group2:
+  group_name: hmi
+  component_name: hmi
+  buttons: [[pause,trigger,select_pause],
+    [intro,trigger,select_intro],
+    [roses,trigger,select_roses],
+    [ball,trigger,select_ball],
+    [graspball, trigger, grasp_ball],
+    [releaseball, trigger, release_ball]]
+group3:
+  group_name: roses
+  component_name: hmi
+  buttons: [[none,trigger,handover_none],
+    [middle,trigger,handover_middle],
+    [offer,trigger,handover_offer_rose],
+    [release,trigger,handover_release_rose]]
+group4:
+  group_name: mimic
+  component_name: mimic
+  buttons: [[happy,trigger,happy],
+    [blinkingright,trigger,blinking_right],
+    [tired,trigger,tired]]
+
 group5:
   group_name: arm_left
   component_name: arm_left
@@ -19,7 +43,9 @@ group5:
     [home,move,home],
     [folded,move,folded],
     [side, move, side],
-    [hug, move, hug]]
+    [hug, move, hug],
+    [preball, move, pre_ball],
+    [holdball, move, hold_ball]]
 group6:
   group_name: arm_right
   component_name: arm_right
@@ -29,7 +55,9 @@ group6:
     [home,move,home],
     [folded,move,folded],
     [side, move, side],
-    [hug, move, hug]]
+    [hug, move, hug],
+    [preball, move, pre_ball],
+    [holdball, move, hold_ball]]
 group7:
   group_name: gripper_left
   component_name: gripper_left
@@ -37,7 +65,8 @@ group7:
     [recover,recover],
     [home,move,home],
     [open,move,open],
-    [close, move, close]]
+    [close, move, close],
+    [spread, move, spread]]
 group8:
   group_name: gripper_right
   component_name: gripper_right
@@ -45,19 +74,5 @@ group8:
     [recover,recover],
     [home,move,home],
     [open,move,open],
-    [close, move, close]]
-group91:
-  group_name: hmi
-  component_name: hmi
-  buttons: [[pause,trigger,select_pause],
-    [intro,trigger,select_intro],
-    [roses,trigger,select_roses],
-    [ball,trigger,select_ball]]
-group92:
-  group_name: roses
-  component_name: hmi
-  buttons: [[left,trigger,handover_left],
-    [right,trigger,handover_right],
-    [middle,trigger,handover_middle],
-    [offer,trigger,handover_offer_rose],
-    [release,trigger,handover_release_rose]]
+    [close, move, close],
+    [spread, move, spread]]

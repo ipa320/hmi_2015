@@ -17,7 +17,7 @@
     </include>
 
     <group>
-        <machine name="cob4-2-b1" address="$(arg cob4-2-b1)" env-loader="$(find cob_bringup)/env.sh" default="true"/>
+        <machine name="cob4-2-b1" address="$(arg cob4-2-b1)" env-loader="$(find cob_bringup)/env.sh" default="true" timeout="30"/>
 
         <!-- start navigation -->
         <include file="$(find cob_navigation_global)/launch/2dnav_linear.launch" >
@@ -25,6 +25,7 @@
         </include>
 
         <include file="$(find hmi_table_localisation)/ros/launch/table_localisation.launch"/>
+        <node pkg="hmi_manipulation" type="roses_tf_broadcaster.py" name="roses_tf_broadcaster" respawn="false" output="screen" />
         
         <include file="$(find cobvid)/launch/start_demo_berlin.launch"/>
         

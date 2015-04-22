@@ -23,8 +23,12 @@ def move_gripper(component_name, pos):
     counter = 0
     while not rospy.is_shutdown() and error_code != 0:
         print "trying to move", component_name, "to", pos, "retries: ", counter
+        #rospy.sleep(0.1)
         handle = sss.move(component_name, pos)
+        handle.wait()
         error_code = handle.get_error_code()
+        if counter > 5:
+        		sss.set_light("light_torso","blue")
         if counter > 100:
             sss.set_light("light_torso","red")
             sss.say([component_name + " error, please help me"])
@@ -33,6 +37,7 @@ def move_gripper(component_name, pos):
             sss.set_light("light_torso","cyan")
             return False
         counter += 1
+    sss.set_light("light_torso","cyan")
     return True
 
 class Init(smach.State):
@@ -41,7 +46,19 @@ class Init(smach.State):
             output_keys=['reset_roses'])
 
     def execute(self, userdata):
-
+        sss.set_light("light_base","green")
+        sss.set_light("light_torso","green")
+        rospy.sleep(0.5)
+        sss.set_light("light_base","cyan")
+        sss.set_light("light_torso","cyan")
+        rospy.sleep(0.5)
+        sss.set_light("light_base","green")
+        sss.set_light("light_torso","green")
+        rospy.sleep(0.5)
+        sss.set_light("light_base","cyan")
+        sss.set_light("light_torso","cyan")
+        rospy.sleep(0.5)
+        
         #handle_gripper_left = sss.move("gripper_left","home")
         #handle_gripper_right = sss.move("gripper_right","home")
         #handle_gripper_left.wait()
@@ -156,7 +173,7 @@ class SelectCurrentRose(smach.State):
             current_x = self.current_rose.split("_")[2].split("-")[0]
             if current_x == min(xes):
                 rospy.loginfo("selected %s", self.current_rose)
-                sss.say(["selected " + self.current_rose], False)
+                #sss.say(["selected " + self.current_rose], False)
                 rospy.sleep(0.5) #FIXME: wait for TF to update
                 userdata.reset_rotation = True
                 # remove current rose from list
@@ -176,7 +193,7 @@ class SelectCurrentRose(smach.State):
             current_x = self.current_rose.split("_")[2].split("-")[0]
             if current_x == min(xes):
                 rospy.loginfo("selected %s", self.current_rose)
-                sss.say(["selected " + self.current_rose], False)
+                #sss.say(["selected " + self.current_rose], False)
                 rospy.sleep(0.5) #FIXME: wait for TF to update
                 userdata.reset_rotation = True
                 # remove current rose from list
@@ -187,7 +204,7 @@ class SelectCurrentRose(smach.State):
                 self.roses_left = []
 
         rospy.logwarn("No more roses, please fill up")
-        sss.say(["No more roses, please fill up"],False)
+        #sss.say(["I delivered all roses from the table. Please provide me with more roses."],False)
         (self.roses_left, self.roses_right) = self.fill_roses() # contains names of roses
         return "empty"
 
@@ -238,10 +255,10 @@ class RotateRose(smach.State):
                 self.angle_offset_yaw = -self.extreme_angle_yaw_1
                 userdata.reset_rotation = False
             else:
-                if math.fabs(self.angle_offset_yaw) < math.fabs(self.extreme_angle_yaw_1) and math.fabs(self.angle_offset_yaw) > math.fabs(self.extreme_angle_yaw2):
+                if math.fabs(self.angle_offset_yaw) < math.fabs(self.extreme_angle_yaw_1) or math.fabs(self.angle_offset_yaw) > math.fabs(self.extreme_angle_yaw_2):
                     # reset angle_offset_yaw
                     self.angle_offset_yaw = -self.extreme_angle_yaw_1
-                    sss.say(["skipping rose"],False)
+                    #sss.say(["Unfortunately I can not reach this rose. I will try the next one."], False)
                     return "failed"
                 else:
                     self.angle_offset_yaw += angle_step_yaw
@@ -252,10 +269,10 @@ class RotateRose(smach.State):
                 self.angle_offset_yaw = self.extreme_angle_yaw_1
                 userdata.reset_rotation = False
             else:
-                if math.fabs(self.angle_offset_yaw) < math.fabs(self.extreme_angle_yaw_1) and math.fabs(self.angle_offset_yaw) > math.fabs(self.extreme_angle_yaw2):
+                if math.fabs(self.angle_offset_yaw) < math.fabs(self.extreme_angle_yaw_1) or math.fabs(self.angle_offset_yaw) > math.fabs(self.extreme_angle_yaw_2):
                     # reset angle_offset_yaw
                     self.angle_offset_yaw = self.extreme_angle_yaw_1
-                    sss.say(["skipping rose"],False)                    
+                    #sss.say(["Unfortunately I can not reach this rose. I will try the next one."], False)
                     return "failed"
                 else:
                     self.angle_offset_yaw += angle_step_yaw
@@ -321,7 +338,7 @@ class GraspRose(smach.State):
         ### Create a handle for the Planning Scene Interface
         self.psi = PlanningSceneInterface()
         
-        self.eef_step = 0.02
+        self.eef_step = 0.01
         self.jump_threshold = 2
         
         rospy.sleep(1)
@@ -538,10 +555,10 @@ class GraspRose(smach.State):
         #if not (frac_approach == 1.0 and frac_grasp == 1.0 and frac_lift == 1.0 and not traj_pre_grasp == None):
         if not (frac_approach == 1.0 and frac_grasp == 1.0 and frac_lift == 1.0):
             rospy.logerr("Unable to plan whole grasping trajectory")
-            sss.say(["skipping rose"], False)
+            #sss.say(["skipping rose"], False)
             return False
         else:
-            sss.say(["grasping rose"], False)
+            #sss.say(["grasping rose"], False)
 
             # fix trajectories to stop at the end
             traj_approach.joint_trajectory.points[-1].velocities = [0]*7
@@ -611,7 +628,7 @@ class GraspRose(smach.State):
         return True
         
     def smooth_cartesian_path(self, traj):
-        print traj
+        #print traj
         time_offset = 0.2
         
         for i in range(len(traj.joint_trajectory.points)):
@@ -620,8 +637,8 @@ class GraspRose(smach.State):
         traj.joint_trajectory.points[-1].time_from_start += rospy.Duration(time_offset)
         
         
-        print "\n\n\n"
-        print traj
+        #print "\n\n\n"
+        #print traj
         return traj
 
 
@@ -642,7 +659,7 @@ class MoveToTable(smach.State):
         #rospy.loginfo("Grasping rose...")
         #sss.wait_for_input()
 
-        sss.say(["move to table"])
+        #sss.say(["move to table"])
 
         # rough positioning
         sss.move("base","table_" + self.side, mode=self.mode)
@@ -653,9 +670,9 @@ class MoveToTable(smach.State):
         table_pose_offset.header.stamp = rospy.Time(0)
         table_pose_offset.pose.position.x = -0.8
         if self.side == "left":
-            table_pose_offset.pose.position.y = 1.0
+            table_pose_offset.pose.position.y = 1.1
         elif self.side == "right":
-            table_pose_offset.pose.position.y = -1.0
+            table_pose_offset.pose.position.y = -1.1
         else:
             rospy.logerr("invalid side: %s", self.side)
             sys.exit()
@@ -679,6 +696,7 @@ class Handover(smach.State):
             input_keys=['active_arm'])
 
         # service servers
+        rospy.Service('/hmi/handover_none', Trigger, self.handover_none_cb)
         rospy.Service('/hmi/handover_left', Trigger, self.handover_left_cb)
         rospy.Service('/hmi/handover_right', Trigger, self.handover_right_cb)
         rospy.Service('/hmi/handover_middle', Trigger, self.handover_middle_cb)
@@ -690,6 +708,11 @@ class Handover(smach.State):
         self.offer = False
         self.release = False
 
+    def handover_none_cb(self, req):
+        self.offer = True
+        self.handover_pos = "NONE"
+        print "selected", self.handover_pos
+        return TriggerResponse()
     def handover_left_cb(self, req):
         self.handover_pos = "handover_left"
         print "selected", self.handover_pos
@@ -712,17 +735,26 @@ class Handover(smach.State):
     def execute(self, userdata):
         self.offer = False
         self.release = False
-        self.handover_pos = ""
+        self.handover_pos = ""           
         
         # move to handover pos
         sss.set_light("light_base","green")
         while not rospy.is_shutdown() and self.handover_pos == "" and not self.offer:
             rospy.loginfo("waiting for handover pos or use joystick")
             rospy.sleep(1)
-        if self.handover_pos != "":
+        
+        if self.handover_pos == "NONE":
+            sss.set_light("light_base","cyan")
+            sss.move("arm_" + userdata.active_arm ,"side", False)
+            move_gripper("gripper_" + userdata.active_arm, "home")
+            self.offer = False
+            self.release = False
+            self.handover_pos = ""
+            return "succeeded" 
+        elif self.handover_pos != "":
             sss.set_light("light_base","cyan")
             sss.move("base",self.handover_pos, mode=self.mode)
-        self.handover_pos = ""
+        #self.handover_pos = ""
         
         # offer
         sss.set_light("light_base","green")
@@ -733,7 +765,7 @@ class Handover(smach.State):
         
         sss.set_light("light_base","cyan")
         sss.move("arm_" + userdata.active_arm ,"handover")
-        sss.say(["enjoy the rose"])
+        sss.say(["This rose is for you. Have a good day."])
         
         # release
         sss.set_light("light_base","green")
@@ -749,6 +781,9 @@ class Handover(smach.State):
         #sss.move("gripper_" + userdata.active_arm ,"home", False)
         move_gripper("gripper_" + userdata.active_arm, "home")
         sss.move("arm_" + userdata.active_arm ,"side")
+        
+        sss.move("base",self.handover_pos+"_post", mode=self.mode)
+        self.handover_pos = ""
 
         return "succeeded"
 
@@ -816,7 +851,7 @@ class Roses(smach.StateMachine):
 
 
 class SM(smach.StateMachine):
-    def __init__(self):
+    def __init__(self):        
         smach.StateMachine.__init__(self,outcomes=['ended'])
         with self:
             smach.StateMachine.add('STATE',Roses(),
@@ -824,7 +859,7 @@ class SM(smach.StateMachine):
                     'failed':'ended'})
 
 if __name__=='__main__':
-    rospy.init_node('roses')
+    rospy.init_node('roses')    
     sm = SM()
     sis = smach_ros.IntrospectionServer('sm', sm, 'SM')
     sis.start()
