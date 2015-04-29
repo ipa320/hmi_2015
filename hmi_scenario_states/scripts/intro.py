@@ -8,6 +8,7 @@ import sys
 
 import random
 
+from std_srvs.srv import Trigger
 
 from simple_script_server import *
 sss = simple_script_server()
@@ -90,14 +91,14 @@ class CheckForStop(smach.State):
         print "stop intro"
         self.stop_requested = True
         res = TriggerResponse()
-        res.success.data = True
+        res.success = True
         return res
 
     def continue_cb(self, req):
         print "continue intro"
         self.stop_requested = False
         res = TriggerResponse()
-        res.success.data = True
+        res.success = True
         return res
 
 class Finalize(smach.State):
