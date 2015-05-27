@@ -6,7 +6,7 @@ import tf
 import sys
 import copy
 
-from cob_srvs.srv import Trigger, TriggerRequest, TriggerResponse
+from std_srvs.srv import Trigger
 
 from simple_script_server import *
 sss = simple_script_server()
@@ -20,11 +20,11 @@ def grasp_ball(req):
     #wait_for_services
     if not wait_for_service('/scenario/po1', 5.0): #pre_ball_start
         res = TriggerResponse()
-        res.success.data = False
+        res.success = False
         return res
     if not wait_for_service('/scenario/rec1', 5.0): #hold_ball
         res = TriggerResponse()
-        res.success.data = False
+        res.success = False
         return res
     
     rospy.loginfo("All Services available!")
@@ -44,7 +44,7 @@ def grasp_ball(req):
     if not call_service(my_client_pre_ball):
         rospy.logerr("Movement to PreBall failed!")
         res = TriggerResponse()
-        res.success.data = False
+        res.success = False
         return res
     
     move_gripper("gripper_left", "spread")
@@ -54,11 +54,11 @@ def grasp_ball(req):
     if not call_service(my_client_hold_ball):
         rospy.logerr("Movement to HoldBall failed!")
         res = TriggerResponse()
-        res.success.data = False
+        res.success = False
         return res
     
     res = TriggerResponse()
-    res.success.data = True
+    res.success = True
     return res
 
 #def grasp_ball(req):
@@ -81,7 +81,7 @@ def grasp_ball(req):
 #    handle_arm_right.wait()
 #    
 #    res = TriggerResponse()
-#    res.success.data = True
+#    res.success = True
 #    return res
 
 def release_ball(req):
@@ -112,7 +112,7 @@ def release_ball(req):
     handle_arm_right.wait()
 
     res = TriggerResponse()
-    res.success.data = True
+    res.success = True
     return res
 
 def move_gripper(component_name, pos):
@@ -153,11 +153,11 @@ def call_service(proxy):
         #print req
         res = proxy(req)
         #print res
-        if res.success.data:
-            rospy.loginfo("Service call successful: %s"%res.error_message.data)
+        if res.success:
+            rospy.loginfo("Service call successful: %s"%res.message)
             return True
         else:
-            rospy.logerr("Service not successful: %s"%res.error_message.data)
+            rospy.logerr("Service not successful: %s"%res.message)
             return False
     except rospy.ServiceException, e:
         print "Service call failed: %s"%e
@@ -293,14 +293,14 @@ class CheckForStop(smach.State):
         print "stop ball"
         self.stop_requested = True
         res = TriggerResponse()
-        res.success.data = True
+        res.success = True
         return res
 
     def continue_cb(self, req):
         print "continue ball"
         self.stop_requested = False
         res = TriggerResponse()
-        res.success.data = True
+        res.success = True
         return res
 
 class BallHandlingFinalize(smach.State):

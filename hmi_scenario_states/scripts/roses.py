@@ -9,6 +9,7 @@ import copy
 
 import random
 
+from std_srvs.srv import Trigger
 from geometry_msgs.msg import PoseStamped
 from moveit_commander import MoveGroupCommander, PlanningSceneInterface
 from moveit_msgs.msg import RobotState, AttachedCollisionObject, CollisionObject
@@ -97,14 +98,14 @@ class CheckForStop(smach.State):
         print "stop roses"
         self.stop_requested = True
         res = TriggerResponse()
-        res.success.data = True
+        res.success = True
         return res
 
     def continue_cb(self, req):
         print "continue roses"
         self.stop_requested = False
         res = TriggerResponse()
-        res.success.data = True
+        res.success = True
         return res
 
 class Finalize(smach.State):

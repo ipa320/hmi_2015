@@ -4,7 +4,7 @@ import smach
 import smach_ros
 import sys
 
-from cob_srvs.srv import Trigger, TriggerResponse, TriggerRequest
+from std_srvs.srv import Trigger
 
 # states
 from intro import Intro
@@ -60,7 +60,7 @@ class SelectScenario(smach.State):
         print "selected", self.next_scenario
         self.stop_all_sub_state_machines()
         res = TriggerResponse()
-        res.success.data = True
+        res.success = True
         return res
 
     def trigger_intro_cb(self,req):
@@ -69,7 +69,7 @@ class SelectScenario(smach.State):
         self.stop_all_sub_state_machines()
         self.srv_continue_intro()
         res = TriggerResponse()
-        res.success.data = True
+        res.success = True
         return res
 
     def trigger_roses_cb(self,req):
@@ -78,7 +78,7 @@ class SelectScenario(smach.State):
         self.stop_all_sub_state_machines()
         self.srv_continue_roses()
         res = TriggerResponse()
-        res.success.data = True
+        res.success = True
         return res
 
     def trigger_ball_cb(self,req):
@@ -87,7 +87,7 @@ class SelectScenario(smach.State):
         self.stop_all_sub_state_machines()
         self.srv_continue_ball()
         res = TriggerResponse()
-        res.success.data = True
+        res.success = True
         return res
 
     def stop_all_sub_state_machines(self):
